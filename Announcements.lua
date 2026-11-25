@@ -20,7 +20,16 @@ function VMH.FormatDuration(sec)
     return string.format("%ds", math.ceil(sec - 0.05))
 end
 
+-- Raid-marker codes the game turns into icons in chat. Kept as written.
+local RAID_ICONS = {
+    star = true, circle = true, coin = true, diamond = true, triangle = true, moon = true, square = true,
+    cross = true, x = true, skull = true,
+    rt1 = true, rt2 = true, rt3 = true, rt4 = true, rt5 = true, rt6 = true, rt7 = true, rt8 = true,
+}
+A.RAID_ICONS = RAID_ICONS
+
 local function tokenValue(vars, k)
+    if RAID_ICONS[k:lower()] then return "{" .. k .. "}" end
     local v = vars and vars[k]
     if v == nil or v == "" then return nil end
     return tostring(v)

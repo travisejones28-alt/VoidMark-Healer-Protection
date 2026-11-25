@@ -96,7 +96,7 @@ function VMH.BaseProfile()
         },
         announce = {
             outgoing = true,           -- false = nothing leaves this client
-            prefix = "",
+            prefix = "{skull}",        -- raid-marker code shown as an icon in group chat
             throttle = 1.0,            -- seconds between outgoing messages
             duplicateWindow = 6,       -- identical text within this window is dropped
             hysteresis = 10,           -- percentage points before mana/health re-arm

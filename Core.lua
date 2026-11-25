@@ -6,7 +6,7 @@
 local ADDON, VMH = ...
 VoidMarkHealer = VMH
 VMH.name = ADDON
-VMH.version = "1.0.2"
+VMH.version = "1.0.3"
 VMH.modules = {}
 VMH.debugLog = {}
 VMH.session = { started = nil }

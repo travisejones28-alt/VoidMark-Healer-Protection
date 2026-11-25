@@ -367,8 +367,9 @@ function Cfg:Build_announce(page)
         "Off: nothing leaves your client. Self-only and on-screen alerts still work.")
     check(page, 12, "Test buttons send real chat", function() return db().general.testsSendChat end,
         function(v) db().general.testsSendChat = v end)
-    page:Place(W.EditBox(page.frame, "Message prefix (optional)", 200, function() return an().prefix end,
+    page:Place(W.EditBox(page.frame, "Message prefix (raid icon or text)", 200, function() return an().prefix end,
         function(v) an().prefix = v end), 12, 48)
+    page:Note("Icons: {skull} {cross} {square} {moon} {triangle} {diamond} {circle} {star}. Leave empty for none. Also work inside alert texts.", 30)
     slider(page, 12, "Minimum time between messages", 0.5, 5, 0.5, function() return an().throttle end,
         function(v) an().throttle = v end, function(v) return v .. "s" end)
     slider(page, 12, "Drop identical messages within", 0, 30, 1, function() return an().duplicateWindow end,

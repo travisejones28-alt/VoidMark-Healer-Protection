@@ -109,6 +109,9 @@ Tests run against a mocked client (including secret values). They do not replace
 
 ## Changes
 
+**1.0.3** - Group messages start with the {skull} raid icon by default (Announcements > Message prefix; clear it for none).
+Raid-icon codes ({skull}, {cross}, {rt1}-{rt8}...) also work inside any alert text.
+
 **1.0.2** - New "Run in" setting (General tab, account-wide): Dungeons and raids only (default), add battlegrounds/arenas,
 or everywhere. Outside those places nothing is detected, shown, announced or counted. `/vmh world` toggles open world on/off.
 Simulations and Test buttons still work anywhere.

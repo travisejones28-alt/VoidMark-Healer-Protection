@@ -44,6 +44,15 @@ function P:Load()
     if cdb.autoSwitch == nil then cdb.autoSwitch = true end
     cdb.autoMap = type(cdb.autoMap) == "table" and cdb.autoMap or {}
     if db.runIn == nil then db.runIn = "dungeonraid" end
+    -- 1.0.3: group messages start with the skull marker (once; a prefix you set is kept)
+    if not db.skullPrefixSet then
+        db.skullPrefixSet = true
+        for _, prof in pairs(db.profiles) do
+            if type(prof) == "table" and type(prof.announce) == "table" and (prof.announce.prefix == nil or prof.announce.prefix == "") then
+                prof.announce.prefix = "{skull}"
+            end
+        end
+    end
     fillMissing(cdb.autoMap, { party = "Dungeon", raid = "Raid", pvp = "PvP", arena = "PvP", world = "Solo", worldGroup = "Dungeon" })
     if not db.profiles[cdb.profile] then cdb.profile = "Dungeon" end
     VMH.db = db.profiles[cdb.profile]
