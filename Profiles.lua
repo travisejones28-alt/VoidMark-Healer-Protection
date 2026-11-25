@@ -49,6 +49,15 @@ function P:Load()
         if type(prof) == "table" and type(prof.alerts) == "table" then prof.alerts.range = nil end
     end
     db.rangeWhisperSet = nil
+    -- 1.1.3: Dungeon profile quieter (once, only where still on the old defaults)
+    if not db.dungeonQuietSet then
+        db.dungeonQuietSet = true
+        local d = db.profiles.Dungeon
+        if type(d) == "table" and type(d.alerts) == "table" and type(d.countdown) == "table" then
+            if d.alerts.multiEnemy and d.alerts.multiEnemy.threshold == 2 then d.alerts.multiEnemy.threshold = 3 end
+            if d.countdown.minDuration == 5 then d.countdown.minDuration = 8 end
+        end
+    end
     -- 1.1.1: sounds off by default (once; turning them back on later sticks)
     if not db.soundsOffSet then
         db.soundsOffSet = true

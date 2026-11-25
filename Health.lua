@@ -49,7 +49,7 @@ function Hm:Evaluate()
 end
 
 function Hm:Queue()
-    if self.pending then return end
+    if self.pending or not VMH:IsActiveHere() then return end
     self.pending = true
     VMH.After(0.2, function() Hm:Evaluate() end)
 end

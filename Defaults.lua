@@ -158,6 +158,8 @@ VMH.PRESETS = {
         p.alerts.los.enabled = true
         p.alerts.los.channels = { auto = true }
         p.alerts.multiEnemy.enabled = true
+        p.alerts.multiEnemy.threshold = 3   -- two mobs on the healer is a normal pull
+        p.countdown.minDuration = 8         -- short CC: alert + recovery only
     end,
     Raid = function(p)
         p.announce.throttle = 2.0
@@ -175,6 +177,7 @@ VMH.PRESETS = {
             p.alerts[k].enabled = false
         end
         p.alerts.multiEnemy.enabled = true
+        p.alerts.multiEnemy.threshold = 2   -- PvP: two players on you matters
         p.alerts.multiEnemy.context = "any"
         p.alerts.multiEnemy.cooldown = 15
         p.alerts.root.channels = { auto = true }

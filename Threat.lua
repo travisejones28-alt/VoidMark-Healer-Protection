@@ -87,8 +87,15 @@ function T:Evaluate()
     if hasAggro then
         self.calmSince = nil
         if not self.aggro then
-            self.aggro = true
-            VMH.Announce:Alert("aggro", { name = npcName })
+            -- must last 2 seconds: a mob briefly turning to you isn't aggro
+            self.aggroSince = self.aggroSince or now
+            if now - self.aggroSince >= 2 then
+                self.aggro = true
+                self.aggroSince = nil
+                VMH.Announce:Alert("aggro", { name = npcName })
+            else
+                self:Queue(2.05 - (now - self.aggroSince))
+            end
         end
     elseif self.aggro then
         self.calmSince = self.calmSince or now
@@ -123,10 +130,12 @@ function T:Evaluate()
         self.multi = false
     end
 
+    if not hasAggro then self.aggroSince = nil end
     if self.aggro and not hasAggro then self:Queue(1) end
 end
 
 function T:Queue(delay)
+    if not VMH:IsActiveHere() then return end
     if self.pending then return end
     self.pending = true
     VMH.After(delay or 0.3, function() T:Evaluate() end)

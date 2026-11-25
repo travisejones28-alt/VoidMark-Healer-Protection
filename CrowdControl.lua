@@ -436,7 +436,7 @@ function CC:HealBlocked()
     if VMH.Safe(_G.IsMounted) == true or VMH.Safe(_G.UnitOnTaxi, "player") == true then return false end
     local form = VMH.Number(VMH.Safe(_G.GetShapeshiftForm))
     if form and form > 0 then return false end
-    if VMH.HasPlayerBuff(15473) then return false end
+    if VMH.shadowform then return false end
     local u, noMana = usable(id)
     if u == nil then return false end
     return u == false and noMana == false
@@ -476,14 +476,21 @@ end
 
 function CC:Init()
     VMH:On("SPELLS_CHANGED", function() CC.healDirty = true end)
+    -- fires on every mana tick in combat: at most 5 checks a second
     VMH:On("SPELL_UPDATE_USABLE", function()
-        if VMH.Safe(_G.UnitAffectingCombat, "player") == true or next(CC.active) then VMH:QueueAuraScan() end
+        if CC.usablePending or not VMH:IsActiveHere() then return end
+        if VMH.Safe(_G.UnitAffectingCombat, "player") ~= true and not next(CC.active) then return end
+        CC.usablePending = true
+        VMH.After(0.2, function() CC.usablePending = false; VMH:QueueAuraScan() end)
     end)
     for _, ev in ipairs({ "LOSS_OF_CONTROL_ADDED", "PLAYER_CONTROL_LOST" }) do
         VMH:On(ev, function() if VMH:IsActiveHere() then CC:Snapshot(ev) end end)
     end
     VMH:OnPlayerAura(function() CC:Scan() end)
-    VMH:OnUnit("UNIT_AURA", "player", function() VMH:QueueAuraScan() end)
+    VMH:OnUnit("UNIT_AURA", "player", function()
+        -- paused outside your chosen places, except while a simulation or effect is showing
+        if VMH:IsActiveHere() or next(CC.sims) or next(CC.active) then VMH:QueueAuraScan() end
+    end)
     for _, ev in ipairs({ "LOSS_OF_CONTROL_ADDED", "LOSS_OF_CONTROL_UPDATE", "PLAYER_CONTROL_LOST", "PLAYER_CONTROL_GAINED" }) do
         VMH:On(ev, function() VMH:QueueAuraScan() end)
     end

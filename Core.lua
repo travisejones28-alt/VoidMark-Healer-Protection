@@ -6,7 +6,7 @@
 local ADDON, VMH = ...
 VoidMarkHealer = VMH
 VMH.name = ADDON
-VMH.version = "1.1.2"
+VMH.version = "1.1.3"
 VMH.modules = {}
 VMH.debugLog = {}
 VMH.session = { started = nil }
@@ -234,10 +234,60 @@ function VMH:IsHealerActive()
     if role == "DAMAGER" or role == "TANK" then return false end
     local class = VMH.PlayerClass() or ""
     if not HEAL_CLASSES[class] then return false end
-    -- A priest in Shadowform is not healing; stay quiet unless set to "always".
-    if class == "PRIEST" and VMH.HasPlayerBuff(15473) then return false end
+    -- A priest in Shadowform is not healing (cached on aura changes).
+    if class == "PRIEST" and VMH.shadowform then return false end
+    -- Active talent spec: most points outside the healing tree = not healing.
+    if VMH.healSpec == false then return false end
     return true
 end
+
+------------------------------------------------------------------------
+-- Talent spec. Healing trees per class (tab index); a spec counts as
+-- healing when its healing-tree points are at least the other trees'.
+-- Unknown / unreadable talents never block alerts.
+------------------------------------------------------------------------
+local HEAL_TABS = { PRIEST = { [1] = true, [2] = true }, PALADIN = { [1] = true }, DRUID = { [3] = true }, SHAMAN = { [3] = true } }
+VMH.healSpec = nil
+
+local function tabPoints(tab, group)
+    local r = pack(pcall(_G.GetTalentTabInfo, tab, false, false, group))
+    if not r[1] then return nil end
+    -- Classic shape: name, icon, points, file. Later shape: id, name, desc, icon, points, ...
+    local v = (type(Readable(r[2])) == "string") and r[4] or r[6]
+    v = Readable(v)
+    return type(v) == "number" and v or nil
+end
+
+function VMH:UpdateSpec()
+    local class = VMH.PlayerClass() or ""
+    local heal = HEAL_TABS[class]
+    if not heal or type(_G.GetTalentTabInfo) ~= "function" then self.healSpec = nil; return end
+    local group = Safe(_G.GetActiveTalentGroup, false, false)
+    local healPts, otherMax = 0, 0
+    local numTabs = (type(_G.GetNumTalentTabs) == "function" and Safe(_G.GetNumTalentTabs)) or 3
+    for tab = 1, numTabs do
+        local p = tabPoints(tab, group)
+        if p == nil then self.healSpec = nil; return end
+        if heal[tab] then healPts = healPts + p elseif p > otherMax then otherMax = p end
+    end
+    if healPts + otherMax == 0 then self.healSpec = nil; return end -- no talents spent
+    local was = self.healSpec
+    self.healSpec = healPts >= otherMax
+    if was ~= self.healSpec then
+        self:Debug("talent spec: " .. (self.healSpec and "healing" or "not healing") ..
+            " (" .. healPts .. " healing / " .. otherMax .. " other)")
+    end
+end
+
+for _, ev in ipairs({ "PLAYER_TALENT_UPDATE", "ACTIVE_TALENT_GROUP_CHANGED", "CHARACTER_POINTS_CHANGED", "PLAYER_LOGIN" }) do
+    VMH:On(ev, function() VMH:UpdateSpec() end)
+end
+
+-- Shadowform, remembered between aura changes instead of scanning buffs per alert.
+VMH.shadowform = false
+VMH:OnPlayerAura(function()
+    if VMH.PlayerClass() == "PRIEST" then VMH.shadowform = VMH.HasPlayerBuff(15473) end
+end)
 
 function VMH.HasPlayerBuff(spellID)
     if VMH.AurasHidden() then return false end
@@ -309,6 +359,7 @@ end)
 
 VMH:On("PLAYER_ENTERING_WORLD", function()
     if not VMH.loaded then return end
+    VMH:UpdateSpec()
     if not VMH.sv.welcomed then
         VMH.sv.welcomed = true
         VMH:Print("loaded. Type /vmh for settings, /vmh preview to place the crowd-control display.")

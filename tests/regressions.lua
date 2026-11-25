@@ -966,6 +966,87 @@ test("line of sight: only in combat and only when they're under 50% health", fun
     S.inCombat = false
 end)
 
+test("talent spec: Shadow spec is quiet even out of Shadowform; Disc/Holy alerts", function()
+    fresh()
+    VMH.Profiles:Select("Dungeon", true)
+    local specs = { [1] = { 21, 30, 0 }, [2] = { 0, 10, 41 } }
+    local active = 1
+    GetActiveTalentGroup = function() return active end
+    GetNumTalentTabs = function() return 3 end
+    GetTalentTabInfo = function(tab, _, _, group) return "Tree" .. tab, 1, specs[group or active][tab], "file" end
+    Emit("PLAYER_TALENT_UPDATE")
+    eq(VMH.healSpec, true, "21/30/0 is healing")
+    active = 2
+    Emit("ACTIVE_TALENT_GROUP_CHANGED")
+    eq(VMH.healSpec, false, "0/10/41 is Shadow")
+    addLoC("STUN", 408, 6)
+    Advance(0.5)
+    eq(#S.chat, 0, "Shadow spec: no alerts")
+    active = 1
+    Emit("ACTIVE_TALENT_GROUP_CHANGED")
+    addLoC("SILENCE", 15487, 6)
+    Advance(0.5)
+    eq(count(chatTexts(), "silenced"), 1, "healing spec: alerts")
+    GetTalentTabInfo = function() error("no talents API") end
+    Emit("PLAYER_TALENT_UPDATE")
+    eq(VMH.healSpec, nil, "unreadable talents never block")
+    GetTalentTabInfo, GetActiveTalentGroup, GetNumTalentTabs = nil, nil, nil
+    VMH.healSpec = nil
+end)
+
+test("dungeon: 3+ enemies, countdown only from 8s, old Dungeon profile updated once", function()
+    fresh()
+    VMH.Profiles:Select("Dungeon", true)
+    eq(VMH.db.alerts.multiEnemy.threshold, 3)
+    eq(VMH.db.countdown.minDuration, 8)
+    S.inCombat = true
+    S.plates = { "nameplate1", "nameplate2" }
+    S.units.nameplate1 = { name = "A", hostile = true, guid = "A", targetsPlayer = true }
+    S.units.nameplate2 = { name = "B", hostile = true, guid = "B", targetsPlayer = true }
+    VMH.db.alerts.aggro.enabled = false
+    Emit("NAME_PLATE_UNIT_ADDED", "nameplate2"); Advance(0.5)
+    eq(count(chatTexts(), "enemies on the healer"), 0, "2 mobs: quiet")
+    S.plates[3] = "nameplate3"
+    S.units.nameplate3 = { name = "C", hostile = true, guid = "C", targetsPlayer = true }
+    Emit("NAME_PLATE_UNIT_ADDED", "nameplate3"); Advance(0.5)
+    eq(count(chatTexts(), "3 enemies on the healer!"), 1)
+    S.chat = {}; S.inCombat = false; S.plates = {}
+    addLoC("STUN", 408, 6)
+    play(7)
+    eq(count(chatTexts(), "resumes in"), 0, "6s effect: no countdown")
+    addLoC("FEAR", 8122, 10)
+    play(11)
+    eq(count(chatTexts(), "Healing resumes in 3s!"), 1, "10s effect: countdown")
+    -- migration
+    VoidMarkHealerDB.dungeonQuietSet = nil
+    VoidMarkHealerDB.profiles.Dungeon.alerts.multiEnemy.threshold = 2
+    VoidMarkHealerDB.profiles.Dungeon.countdown.minDuration = 5
+    VMH.Profiles:Load()
+    eq(VoidMarkHealerDB.profiles.Dungeon.alerts.multiEnemy.threshold, 3)
+    eq(VoidMarkHealerDB.profiles.Dungeon.countdown.minDuration, 8)
+    VoidMarkHealerDB.profiles.Dungeon.countdown.minDuration = 5
+    VMH.Profiles:Load()
+    eq(VoidMarkHealerDB.profiles.Dungeon.countdown.minDuration, 5, "your later choice sticks")
+end)
+
+test("aggro must last 2 seconds", function()
+    fresh()
+    VMH.Profiles:Select("Dungeon", true)
+    S.inCombat = true
+    S.threat = 3
+    Emit("UNIT_THREAT_SITUATION_UPDATE", "player")
+    Advance(1)
+    S.threat = 0
+    Emit("UNIT_THREAT_SITUATION_UPDATE", "player")
+    Advance(3)
+    eq(count(chatTexts(), "aggro"), 0, "brief aggro: quiet")
+    S.threat = 3
+    Emit("UNIT_THREAT_SITUATION_UPDATE", "player")
+    Advance(3)
+    eq(count(chatTexts(), "Healer has aggro!"), 1, "held aggro: announced")
+    S.threat, S.inCombat = 0, false
+end)
+
 test("not a healer: alerts held back", function()
     fresh()
     VMH.Profiles:Select("Dungeon", true)

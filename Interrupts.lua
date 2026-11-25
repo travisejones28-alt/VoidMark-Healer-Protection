@@ -29,7 +29,7 @@ function I:RecentInterrupter()
 end
 
 local function onEnemyCast(_, unit, _, spellID)
-    if not watched(unit) then return end
+    if not watched(unit) or not VMH:IsActiveHere() then return end
     spellID = VMH.Number(spellID)
     if not spellID or not D.INTERRUPTS[spellID] then return end
     if VMH.Safe(_G.UnitIsUnit, unit .. "target", "player") ~= true then return end

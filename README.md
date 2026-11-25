@@ -97,7 +97,7 @@ Forever has no combat log, and can hide values from addons in combat. VoidMark H
   mouseover or friendly target, so with click-casting it's the frame you clicked.
 - **Low/critical health** alerts only fire in combat.
 - **Statistics** only count while you're healing.
-- **Shadow Priests**: Shadowform counts as "not healing" (set "Announce when: Always" to override).
+- **Shadow Priests**: a Shadow talent spec or Shadowform counts as "not healing" (set "Announce when: Always" to override).
 
 ## Development
 
@@ -110,6 +110,14 @@ python tools/package.py               # build + verify dist/VoidMarkHealer.zip
 Tests run against a mocked client (including secret values). They do not replace an in-game check.
 
 ## Changes
+
+**1.1.3** - Quieter and smarter:
+- Knows your active talent spec: mostly Shadow points = not healing, so no alerts as Shadow even out of Shadowform
+  (Disc/Holy specs alert as before; if talents can't be read, nothing is blocked).
+- Dungeon profile: "enemies on you" from 3 (2 is a normal pull); countdown messages only for effects of 8s or more.
+  Your existing Dungeon profile is updated once if it was still on the old defaults.
+- Aggro must last 2 seconds before it is announced.
+- Less background work outside dungeons/raids and during combat mana ticks.
 
 **1.1.2** - Line of sight only alerts in combat, and only when the player you were healing is under 50% health
 (adjustable on the alert's settings). If the game hides their health, nothing is announced (reason in the debug log).
