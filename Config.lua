@@ -231,7 +231,7 @@ function Cfg:AlertEditor(page, startY, firstKey)
             ed.thresholds[key] = s
         end
     end
-    -- whisper controls share the threshold slot (only line of sight / range have them)
+    -- whisper controls share the threshold slot (only line of sight has them)
     ed.whisper = CreateFrame("Frame", nil, ed)
     ed.whisper:SetSize(300, 68)
     ed.whisper:SetPoint("TOPLEFT", ed, "TOPLEFT", 10, -y)
@@ -342,7 +342,7 @@ end
 
 function Cfg:Build_aggro(page)
     self:AlertSection(page, "aggro")
-    page:Note("Enemy counts use visible enemies: turn enemy nameplates on to see more than your target and focus. Line-of-sight and range names use your mouseover or friendly target.", 44)
+    page:Note("Enemy counts use visible enemies: turn enemy nameplates on to see more than your target and focus. Line-of-sight names use your mouseover or friendly target.", 44)
 end
 
 function Cfg:Build_cc(page)

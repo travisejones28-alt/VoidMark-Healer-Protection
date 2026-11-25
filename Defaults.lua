@@ -23,8 +23,6 @@ VMH.ALERTS = {
     { key = "multiEnemy",     tab = "aggro", label = "Enemies on you", prio = 3, text = "{count} enemies on the healer!", threshold = { 2, 2, 6, "Enemies" } },
     { key = "los",            tab = "aggro", label = "Line of sight", prio = 1, text = "Can't heal - out of line of sight ({name})",
       whisperText = "You're out of my line of sight - I can't heal you!" },
-    { key = "range",          tab = "aggro", label = "Out of range",  prio = 1, text = "Can't heal - out of range ({name})",
-      whisperText = "You're out of my healing range - move closer!" },
     -- Crowd control
     { key = "silence",        tab = "cc", label = "Silence",               prio = 5, text = "Healer silenced! ({dur})" },
     { key = "interrupt",      tab = "cc", label = "Interrupt / lockout", prio = 5, text = "Healer interrupted! {school} school locked out ({dur})" },
@@ -79,20 +77,18 @@ local function alertDefaults(a)
     }
     if a.threshold then t.threshold = a.threshold[1] end
     -- Routine notices default to local only so groups are not spammed.
-    if a.key == "manaRecovered" or a.key == "drinkDone" or a.key == "los" or a.key == "range" or a.key == "lowHealth" or a.key == "root" then
+    if a.key == "manaRecovered" or a.key == "drinkDone" or a.key == "los" or a.key == "lowHealth" or a.key == "root" then
         t.channels = { self = true }
     end
     if a.key == "threat" then t.enabled = false end
-    -- Line of sight / range can whisper the player you were trying to heal.
+    -- Line of sight can whisper the player you were trying to heal (off by default).
     if a.whisperText then
-        t.whisper = a.key == "range"
+        t.whisper = false
         t.whisperText = a.whisperText
     end
-    -- Out of range: whisper the player only; the group isn't told.
-    if a.key == "range" then t.channels = {}; t.cooldown = 10 end
     if a.key == "countdown" then t.sound = "none"; t.onscreen = false end
     if a.key == "recovered" then t.sound = "ready" end
-    if a.key == "los" or a.key == "range" then t.cooldown = 8 end
+    if a.key == "los" then t.cooldown = 8 end
     return t
 end
 
@@ -165,7 +161,7 @@ VMH.PRESETS = {
         p.announce.throttle = 2.0
         p.announce.duplicateWindow = 12
         for _, a in pairs(p.alerts) do if a.cooldown > 0 then a.cooldown = a.cooldown * 2 end end
-        for _, k in ipairs({ "lowMana", "drinking", "drinkDone", "los", "range", "threat", "multiEnemy", "root", "lowHealth" }) do
+        for _, k in ipairs({ "lowMana", "drinking", "drinkDone", "los", "threat", "multiEnemy", "root", "lowHealth" }) do
             p.alerts[k].channels = { self = true }
         end
         p.alerts.aggro.channels = { self = true }
@@ -173,7 +169,7 @@ VMH.PRESETS = {
         p.countdown.recoveryShort = false
     end,
     PvP = function(p)
-        for _, k in ipairs({ "lowMana", "drinking", "drinkDone", "manaRecovered", "los", "range", "aggro", "threat" }) do
+        for _, k in ipairs({ "lowMana", "drinking", "drinkDone", "manaRecovered", "los", "aggro", "threat" }) do
             p.alerts[k].enabled = false
         end
         p.alerts.multiEnemy.enabled = true

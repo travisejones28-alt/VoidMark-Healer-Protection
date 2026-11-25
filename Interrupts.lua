@@ -6,7 +6,7 @@
 --    lockout is reported, with the real remaining time.
 --  * The interrupter is named when a visible enemy (target, focus, nameplate,
 --    arena) casts a known interrupt at the player just before the lockout.
---  * Line-of-sight and range failures come from the client's error messages.
+--  * Line-of-sight failures come from the client's error messages.
 local _, VMH = ...
 local I = VMH:NewModule("Interrupts")
 local D = VMH.SpellData
@@ -91,7 +91,7 @@ function I:OnPlayerInterrupted(spellID)
 end
 
 ------------------------------------------------------------------------
--- Line of sight / range
+-- Line of sight
 -- The error message alone doesn't say which spell failed, so a damage spell
 -- (Mind Blast out of sight) must not count as "can't heal". The failed spell
 -- is taken from UNIT_SPELLCAST_FAILED / _SENT when the game reports it; with
@@ -150,8 +150,7 @@ function I:OnUIError(a, b)
     message = VMH.Readable(message)
     if type(message) ~= "string" then return end
     local key
-    if message == _G.SPELL_FAILED_LINE_OF_SIGHT then key = "los"
-    elseif message == _G.SPELL_FAILED_OUT_OF_RANGE or message == _G.ERR_SPELL_OUT_OF_RANGE or message == _G.ERR_OUT_OF_RANGE then key = "range" end
+    if message == _G.SPELL_FAILED_LINE_OF_SIGHT then key = "los" end
     if not key then return end
     local at = VMH.Now()
     -- the failed-cast event can arrive just after the error text
@@ -165,7 +164,7 @@ function I:OnUIError(a, b)
             if not hasFriend then return end
             if not friendly("mouseover") and VMH.Safe(_G.UnitCanAttack, "player", "target") == true then return end
         end
-        -- cooldown per player, so two different out-of-range players both hear about it
+        -- cooldown per player, so two different players out of sight both hear about it
         local cfg = VMH.db.alerts[key]
         local who = key .. ":" .. tostring(name)
         local last = I.lastByPlayer[who]

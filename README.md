@@ -25,7 +25,7 @@ Updates: pull in GitHub Desktop, then `/reload`.
 | Countdown | "Healing resumes in 5s / 3s", then "Healer free - healing resumed!" |
 | Mana & health | Low mana, out of mana, mana recovered, low health, critical health, drinking, finished drinking |
 | Death | Healer died, self-resurrect available (Soulstone/Reincarnation), healer back up |
-| Aggro & threat | Aggro, excessive threat, several enemies on the healer, line-of-sight and range failures |
+| Aggro & threat | Aggro, excessive threat, several enemies on the healer, line-of-sight failures |
 
 Example: `Healer silenced! (8s)` - `Healing resumes in 3s!` - `Healer free - healing resumed!`
 
@@ -92,7 +92,7 @@ Forever has no combat log, and can hide values from addons in combat. VoidMark H
 - **Health alerts** pause while health is hidden. Death and resurrection alerts always work.
 - **Say / Yell** only work inside instances (game rule). **Group chat lockdown** (the game blocks addon group chat, e.g. during boss fights): alerts show for you;
   mana/death alerts post once chat unlocks if still true. No addon can bypass this.
-- **Line of sight / range** only count failed *helpful* spells (a Mind Blast out of sight is ignored). The name is your
+- **Line of sight** only counts failed *helpful* spells (a Mind Blast out of sight is ignored). The name is your
   mouseover or friendly target, so with click-casting it's the frame you clicked.
 - **Low/critical health** alerts only fire in combat.
 - **Statistics** only count while you're healing.
@@ -109,6 +109,8 @@ python tools/package.py               # build + verify dist/VoidMarkHealer.zip
 Tests run against a mocked client (including secret values). They do not replace an in-game check.
 
 ## Changes
+
+**1.0.7** - Out-of-range alert removed entirely (too spammy). Its saved settings are cleaned up.
 
 **1.0.6** - Out of range now whispers the player you were trying to heal ("You're out of my healing range - move
 closer!"), 10s cooldown per player, never posted to the group; NPCs and yourself are never whispered. Line of sight

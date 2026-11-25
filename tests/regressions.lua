@@ -766,63 +766,51 @@ test("chat lockdown: OOM and death post after unlock only if still true", functi
     eq(count(chatTexts(), "Healer is dead!"), 0, "death not posted after revive")
 end)
 
-test("out of range: whispers that player, per-player cooldown, never the group", function()
+test("out of range: no alert at all", function()
     fresh()
-    VMH.Profiles:Select("Dungeon", true)
+    VMH.Profiles:Select("Custom", true)
+    VMH.db.general.healerOnly = "always"
     S.units.mouseover = { name = "Tank", surname = "Person", hostile = false, isPlayer = true }
-    local function fail(spell)
-        Emit("UI_ERROR_MESSAGE", 51, SPELL_FAILED_OUT_OF_RANGE)
-        Emit("UNIT_SPELLCAST_FAILED", "player", "c", spell or 2061)
+    Emit("UI_ERROR_MESSAGE", 51, SPELL_FAILED_OUT_OF_RANGE)
+    Emit("UNIT_SPELLCAST_FAILED", "player", "c", 2061)
+    Advance(1.5)
+    eq(#S.chat, 0)
+    assert(not has(S.prints, "range"), "nothing printed")
+    assert(VMH.ALERT_BY_KEY.range == nil, "alert gone")
+    eq(VMH.db.alerts.range, nil, "no settings")
+end)
+
+test("line of sight: optional whisper to that player, per-player cooldown", function()
+    fresh()
+    VMH.Profiles:Select("Custom", true)
+    VMH.db.alerts.los.channels = {}
+    VMH.db.alerts.los.whisper = true
+    S.units.mouseover = { name = "Tank", surname = "Person", hostile = false, isPlayer = true }
+    local function fail()
+        Emit("UI_ERROR_MESSAGE", 50, SPELL_FAILED_LINE_OF_SIGHT)
+        Emit("UNIT_SPELLCAST_FAILED", "player", "c", 2061)
         Advance(1.2)
     end
     fail()
     eq(#S.chat, 1)
     eq(S.chat[1].type, "WHISPER")
     eq(S.chat[1].target, "Tank-Person")
-    eq(S.chat[1].msg, "You're out of my healing range - move closer!")
+    eq(S.chat[1].msg, "You're out of my line of sight - I can't heal you!")
     fail()
-    eq(#S.chat, 1, "same player within 10s: no repeat")
-    S.units.mouseover = { name = "Rogue", surname = "Guy", hostile = false, isPlayer = true }
-    fail()
-    eq(#S.chat, 2, "different player gets told")
-    eq(S.chat[2].target, "Rogue-Guy")
+    eq(#S.chat, 1, "same player within cooldown")
     S.units.mouseover = { name = "Guard", hostile = false, isPlayer = false }
-    Advance(11)
-    fail()
-    eq(#S.chat, 2, "NPCs are never whispered")
-    -- line of sight: available, off by default
-    S.units.mouseover = { name = "Tank", surname = "Person", hostile = false, isPlayer = true }
-    Emit("UI_ERROR_MESSAGE", 50, SPELL_FAILED_LINE_OF_SIGHT)
-    Emit("UNIT_SPELLCAST_FAILED", "player", "c", 2061)
-    Advance(1.2)
-    local function whispers() local n = 0 for _, c in ipairs(S.chat) do if c.type == "WHISPER" then n = n + 1 end end return n end
-    eq(whispers(), 2, "LoS whisper off by default")
-    VMH.db.alerts.los.whisper = true
     Advance(9)
-    Emit("UI_ERROR_MESSAGE", 50, SPELL_FAILED_LINE_OF_SIGHT)
-    Emit("UNIT_SPELLCAST_FAILED", "player", "c", 2061)
-    Advance(1.2)
-    eq(whispers(), 3)
-    local found = false
-    for _, c in ipairs(S.chat) do if c.type == "WHISPER" and c.msg == "You're out of my line of sight - I can't heal you!" then found = true end end
-    assert(found, "LoS whisper sent")
-    -- Test button shows the whisper locally
-    VMH.Announce:Alert("range", { name = "Testname" }, { test = true })
-    assert(has(S.prints, "[TEST -> WHISPER player]|r You're out of my healing range"), "test shows whisper")
+    fail()
+    eq(#S.chat, 1, "NPCs never whispered")
 end)
 
-test("out of range: old profiles switched to whisper once", function()
+test("old saved range settings are cleaned up", function()
     fresh()
-    VoidMarkHealerDB.rangeWhisperSet = nil
-    VoidMarkHealerDB.profiles.Dungeon.alerts.range.enabled = false
-    VoidMarkHealerDB.profiles.Dungeon.alerts.range.whisper = nil
-    VoidMarkHealerDB.profiles.Dungeon.alerts.range.channels = { self = true }
+    VoidMarkHealerDB.profiles.Dungeon.alerts.range = { enabled = true, channels = { auto = true } }
+    VoidMarkHealerDB.rangeWhisperSet = true
     VMH.Profiles:Load()
-    local r = VoidMarkHealerDB.profiles.Dungeon.alerts.range
-    eq(r.enabled, true); eq(r.whisper, true); eq(next(r.channels), nil)
-    r.enabled = false
-    VMH.Profiles:Load()
-    eq(VoidMarkHealerDB.profiles.Dungeon.alerts.range.enabled, false, "your later choice sticks")
+    eq(VoidMarkHealerDB.profiles.Dungeon.alerts.range, nil)
+    eq(VoidMarkHealerDB.rangeWhisperSet, nil)
 end)
 
 test("not a healer: alerts held back", function()
