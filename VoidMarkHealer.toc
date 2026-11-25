@@ -1,0 +1,26 @@
+## Interface: 16001
+## Title: |cff9d5cffVoidMark|r Healer
+## Notes: Healer protection and group communication: crowd control, interrupts, mana, health and aggro alerts with smart countdowns.
+## Author: Taliaa
+## Version: 1.0.0
+## Category: Combat
+## IconTexture: Interface\Icons\Spell_Holy_PowerWordShield
+## SavedVariables: VoidMarkHealerDB
+## SavedVariablesPerCharacter: VoidMarkHealerCharDB
+
+Core.lua
+SpellData.lua
+Defaults.lua
+Profiles.lua
+History.lua
+Announcements.lua
+CrowdControl.lua
+Countdown.lua
+Interrupts.lua
+Mana.lua
+Health.lua
+Threat.lua
+Display.lua
+Widgets.lua
+Config.lua
+Commands.lua
