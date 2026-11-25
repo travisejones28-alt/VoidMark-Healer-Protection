@@ -22,6 +22,7 @@ VMH.ALERTS = {
     { key = "threat",         tab = "aggro", label = "Excessive threat",   prio = 2, text = "Healer threat high ({pct}%)", threshold = { 90, 60, 100, "Threat at %" }, context = "pve" },
     { key = "multiEnemy",     tab = "aggro", label = "Enemies on you", prio = 3, text = "{count} enemies on the healer!", threshold = { 2, 2, 6, "Enemies" } },
     { key = "los",            tab = "aggro", label = "Line of sight", prio = 1, text = "Can't heal - out of line of sight ({name})",
+      threshold = { 50, 10, 100, "Only if their health is under %" },
       whisperText = "You're out of my line of sight - I can't heal you!" },
     -- Crowd control
     { key = "silence",        tab = "cc", label = "Silence",               prio = 5, text = "Healer silenced! ({dur})" },

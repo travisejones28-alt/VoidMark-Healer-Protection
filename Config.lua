@@ -163,10 +163,10 @@ end
 function Cfg:AlertEditor(page, startY, firstKey)
     local ed = CreateFrame("Frame", nil, page.frame)
     ed:SetPoint("TOPLEFT", page.frame, "TOPLEFT", 296, -startY + 4)
-    ed:SetSize(320, 470)
+    ed:SetSize(320, 516)
     W.Fill(ed, { 0.08, 0.055, 0.13, 1 })
     W.Border(ed, C.border)
-    ed.height = 476
+    ed.height = 522
     ed.key = firstKey -- widgets read their value as soon as they are created
     local function cfg() return db().alerts[ed.key] end
     local y = 8
@@ -230,7 +230,8 @@ function Cfg:AlertEditor(page, startY, firstKey)
             ed.thresholds[key] = s
         end
     end
-    -- whisper controls share the threshold slot (only line of sight has them)
+    -- whisper controls sit under the threshold slot (only line of sight has them)
+    y = y + 46
     ed.whisper = CreateFrame("Frame", nil, ed)
     ed.whisper:SetSize(300, 68)
     ed.whisper:SetPoint("TOPLEFT", ed, "TOPLEFT", 10, -y)

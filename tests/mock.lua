@@ -186,8 +186,14 @@ function GetUnitName(u, showServer)
 end
 function UnitClass(u) if u == "player" then return "Priest", S.class end end
 function UnitGroupRolesAssigned() return S.role end
-function UnitHealth() return S.hpSecret and SECRET or S.hp end
-function UnitHealthMax() return S.hpSecret and SECRET or S.hpMax end
+function UnitHealth(u)
+    if u and u ~= "player" then local d = S.units[u]; if d and d.hpSecret then return SECRET end return d and (d.hp or 100) or nil end
+    return S.hpSecret and SECRET or S.hp
+end
+function UnitHealthMax(u)
+    if u and u ~= "player" then local d = S.units[u]; if d and d.hpSecret then return SECRET end return d and 100 or nil end
+    return S.hpSecret and SECRET or S.hpMax
+end
 function UnitPower() return S.manaSecret and SECRET or S.mana end
 function UnitPowerMax() return S.manaSecret and SECRET or S.manaMax end
 function UnitPowerType() return S.powerType, "MANA" end

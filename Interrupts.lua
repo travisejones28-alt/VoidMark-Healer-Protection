@@ -133,11 +133,21 @@ local function healTargetName()
                 whisper = VMH.Safe(_G.GetUnitName, unit, true)
                 if type(whisper) ~= "string" or whisper == "" then whisper = (VMH.Safe(_G.UnitName, unit)) end
             end
-            return VMH.UnitFullName(unit), true, whisper
+            return VMH.UnitFullName(unit), true, whisper, unit
         end
     end
-    return nil, false, nil
+    return nil, false, nil, nil
 end
+
+-- Health of the player you were healing, or nil when the game hides it.
+local function healthPercent(unit)
+    if not unit then return nil end
+    local cur = VMH.Number(VMH.Safe(_G.UnitHealth, unit))
+    local max = VMH.Number(VMH.Safe(_G.UnitHealthMax, unit))
+    if not cur or not max or max <= 0 then return nil end
+    return cur / max * 100
+end
+I.HealthPercent = healthPercent
 I.lastByPlayer = {}
 
 function I:NoteSpell(spellID)
@@ -153,9 +163,11 @@ function I:OnUIError(a, b)
     if message == _G.SPELL_FAILED_LINE_OF_SIGHT then key = "los" end
     if not key then return end
     local at = VMH.Now()
+    -- Only worth saying in a fight, for someone who actually needs the heal.
+    if VMH.Safe(_G.UnitAffectingCombat, "player") ~= true then return end
     -- the failed-cast event can arrive just after the error text
     VMH.After(0.1, function()
-        local name, hasFriend, whisperTo = healTargetName()
+        local name, hasFriend, whisperTo, unit = healTargetName()
         local r = I.lastSpell
         local helpful = nil
         if r and math.abs(at - r.time) <= 0.5 then helpful = isHelpful(r.id) end
@@ -164,8 +176,15 @@ function I:OnUIError(a, b)
             if not hasFriend then return end
             if not friendly("mouseover") and VMH.Safe(_G.UnitCanAttack, "player", "target") == true then return end
         end
-        -- cooldown per player, so two different players out of sight both hear about it
         local cfg = VMH.db.alerts[key]
+        local hp = healthPercent(unit)
+        local limit = cfg.threshold or 50
+        if not hp or hp >= limit then
+            VMH:Debug("los not announced: " .. tostring(name) .. " health " ..
+                (hp and string.format("%d%%", hp) or "hidden") .. " (limit " .. limit .. "%)")
+            return
+        end
+        -- cooldown per player, so two different players out of sight both hear about it
         local who = key .. ":" .. tostring(name)
         local last = I.lastByPlayer[who]
         local t = VMH.Now()

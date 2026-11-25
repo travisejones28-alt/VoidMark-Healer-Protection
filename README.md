@@ -93,7 +93,7 @@ Forever has no combat log, and can hide values from addons in combat. VoidMark H
 - **Health alerts** pause while health is hidden. Death and resurrection alerts always work.
 - **Say / Yell** only work inside instances (game rule). **Group chat lockdown** (the game blocks addon group chat, e.g. during boss fights): alerts show for you;
   mana/death alerts post once chat unlocks if still true. No addon can bypass this.
-- **Line of sight** only counts failed *helpful* spells (a Mind Blast out of sight is ignored). The name is your
+- **Line of sight** only counts failed *helpful* spells, in combat, on someone under 50% health (a Mind Blast out of sight is ignored). The name is your
   mouseover or friendly target, so with click-casting it's the frame you clicked.
 - **Low/critical health** alerts only fire in combat.
 - **Statistics** only count while you're healing.
@@ -110,6 +110,9 @@ python tools/package.py               # build + verify dist/VoidMarkHealer.zip
 Tests run against a mocked client (including secret values). They do not replace an in-game check.
 
 ## Changes
+
+**1.1.2** - Line of sight only alerts in combat, and only when the player you were healing is under 50% health
+(adjustable on the alert's settings). If the game hides their health, nothing is announced (reason in the debug log).
 
 **1.1.1** - Sounds off by default (alert sounds and countdown ticks), including existing profiles once. Turn back on
 under Visuals & Sounds > Sounds.

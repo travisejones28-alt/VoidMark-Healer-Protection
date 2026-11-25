@@ -360,7 +360,8 @@ end)
 test("line of sight: names mouseover friend, local by default", function()
     fresh()
     VMH.Profiles:Select("Custom", true)
-    S.units.mouseover = { name = "Tank", surname = "Person", hostile = false }
+    S.inCombat = true
+    S.units.mouseover = { name = "Tank", surname = "Person", hostile = false, hp = 30 }
     Emit("UI_ERROR_MESSAGE", 50, SPELL_FAILED_LINE_OF_SIGHT)
     Advance(0.2)
     assert(has(S.prints, "Can't heal - out of line of sight (Tank Person)"))
@@ -525,8 +526,9 @@ test("line of sight: damage spell (Mind Blast) never says can't heal", function(
     fresh()
     VMH.Profiles:Select("Custom", true)
     VMH.db.general.healerOnly = "always"
+    S.inCombat = true
     S.units.target = { name = "Enemy", hostile = true }
-    S.units.mouseover = { name = "Tank", surname = "Person", hostile = false }
+    S.units.mouseover = { name = "Tank", surname = "Person", hostile = false, hp = 30 }
     Emit("UNIT_SPELLCAST_FAILED", "player", "c1", 8092)
     Emit("UI_ERROR_MESSAGE", 50, SPELL_FAILED_LINE_OF_SIGHT)
     Advance(0.3)
@@ -785,7 +787,8 @@ test("line of sight: optional whisper to that player, per-player cooldown", func
     VMH.Profiles:Select("Custom", true)
     VMH.db.alerts.los.channels = {}
     VMH.db.alerts.los.whisper = true
-    S.units.mouseover = { name = "Tank", surname = "Person", hostile = false, isPlayer = true }
+    S.inCombat = true
+    S.units.mouseover = { name = "Tank", surname = "Person", hostile = false, isPlayer = true, hp = 30 }
     local function fail()
         Emit("UI_ERROR_MESSAGE", 50, SPELL_FAILED_LINE_OF_SIGHT)
         Emit("UNIT_SPELLCAST_FAILED", "player", "c", 2061)
@@ -798,7 +801,7 @@ test("line of sight: optional whisper to that player, per-player cooldown", func
     eq(S.chat[1].msg, "You're out of my line of sight - I can't heal you!")
     fail()
     eq(#S.chat, 1, "same player within cooldown")
-    S.units.mouseover = { name = "Guard", hostile = false, isPlayer = false }
+    S.units.mouseover = { name = "Guard", hostile = false, isPlayer = false, hp = 30 }
     Advance(9)
     fail()
     eq(#S.chat, 1, "NPCs never whispered")
@@ -928,6 +931,39 @@ test("sounds off by default and for existing profiles; can be turned back on", f
     VoidMarkHealerDB.profiles.Raid.visuals.sound = true
     VMH.Profiles:Load()
     eq(VoidMarkHealerDB.profiles.Raid.visuals.sound, true, "your later choice sticks")
+end)
+
+test("line of sight: only in combat and only when they're under 50% health", function()
+    fresh()
+    VMH.Profiles:Select("Custom", true)
+    eq(VMH.db.alerts.los.threshold, 50, "default 50%")
+    local function los(hp, combat)
+        VMH.Interrupts.lastByPlayer = {}
+        S.inCombat = combat
+        S.units.mouseover = { name = "Tank", surname = "Person", hostile = false, isPlayer = true, hp = hp }
+        S.prints = {}
+        Emit("UI_ERROR_MESSAGE", 50, SPELL_FAILED_LINE_OF_SIGHT)
+        Emit("UNIT_SPELLCAST_FAILED", "player", "c", 2061)
+        Advance(1.2)
+        return has(S.prints, "out of line of sight")
+    end
+    assert(not los(30, false), "out of combat: quiet")
+    assert(not los(80, true), "healthy target: quiet")
+    assert(not los(50, true), "exactly 50%: quiet")
+    assert(los(49, true), "under 50% in combat: announced")
+    VMH.db.alerts.los.threshold = 70
+    Advance(7) -- past the duplicate-message window
+    assert(los(60, true), "threshold is adjustable")
+    S.units.mouseover = nil
+    VMH.Interrupts.lastByPlayer = {}
+    S.units.mouseover = { name = "Tank", surname = "Person", hostile = false, isPlayer = true, hpSecret = true }
+    S.prints = {}
+    Emit("UI_ERROR_MESSAGE", 50, SPELL_FAILED_LINE_OF_SIGHT)
+    Emit("UNIT_SPELLCAST_FAILED", "player", "c", 2061)
+    Advance(1.2)
+    assert(not has(S.prints, "out of line of sight"), "hidden health: no guess")
+    assert(table.concat(VMH.debugLog, "\n"):find("health hidden", 1, true), "reason logged")
+    S.inCombat = false
 end)
 
 test("not a healer: alerts held back", function()
