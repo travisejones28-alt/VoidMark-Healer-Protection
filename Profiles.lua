@@ -43,6 +43,7 @@ function P:Load()
     cdb.profile = cdb.profile or "Dungeon"
     if cdb.autoSwitch == nil then cdb.autoSwitch = true end
     cdb.autoMap = type(cdb.autoMap) == "table" and cdb.autoMap or {}
+    if db.runIn == nil then db.runIn = "dungeonraid" end
     fillMissing(cdb.autoMap, { party = "Dungeon", raid = "Raid", pvp = "PvP", arena = "PvP", world = "Solo", worldGroup = "Dungeon" })
     if not db.profiles[cdb.profile] then cdb.profile = "Dungeon" end
     VMH.db = db.profiles[cdb.profile]

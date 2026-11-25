@@ -237,6 +237,7 @@ function A:Alert(key, vars, opts)
     if not db.general.enabled and not opts.test then return false, "disabled" end
     if not cfg.enabled and not opts.test then return false, "alert off" end
     if not manual then
+        if not VMH:IsActiveHere() then return false, "not active here" end
         if not self:ContextAllowed(cfg) then return false, "context" end
         if not VMH:IsHealerActive() then return false, "not healer" end
     end

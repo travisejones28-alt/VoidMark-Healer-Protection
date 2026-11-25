@@ -6,7 +6,7 @@
 local ADDON, VMH = ...
 VoidMarkHealer = VMH
 VMH.name = ADDON
-VMH.version = "1.0.1"
+VMH.version = "1.0.2"
 VMH.modules = {}
 VMH.debugLog = {}
 VMH.session = { started = nil }
@@ -248,6 +248,27 @@ end
 
 function VMH:IsEnabled()
     return self.db ~= nil and self.db.general.enabled == true
+end
+
+-- Account-wide "Run in" setting:
+--   dungeonraid = dungeons, raids and scenarios only (default)
+--   instances   = also battlegrounds and arenas
+--   everywhere  = open world too
+-- Outside the chosen places nothing is detected, shown, announced or counted.
+-- Simulations and Test buttons still work so setup can be checked anywhere.
+VMH.RUN_IN = {
+    { value = "dungeonraid", label = "Dungeons and raids only" },
+    { value = "instances", label = "Dungeons, raids, battlegrounds, arenas" },
+    { value = "everywhere", label = "Everywhere (open world too)" },
+}
+function VMH:IsActiveHere()
+    local mode = (self.sv and self.sv.runIn) or "dungeonraid"
+    if mode == "everywhere" then return true end
+    local inInstance, itype = VMH.Safe(_G.IsInInstance)
+    if not inInstance then return false end
+    if itype == "party" or itype == "raid" or itype == "scenario" then return true end
+    if mode == "instances" and (itype == "pvp" or itype == "arena") then return true end
+    return false
 end
 
 ------------------------------------------------------------------------

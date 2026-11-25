@@ -262,6 +262,9 @@ function Cfg:Build_general(page)
     page:Header("General")
     check(page, 12, "Enable VoidMark Healer", function() return db().general.enabled end,
         function(v) db().general.enabled = v end, "Master switch for every alert.")
+    local runIn = W.Dropdown(page.frame, "Run in (all profiles, all characters)", 260, VMH.RUN_IN,
+        function() return VMH.sv.runIn end, function(v) VMH.sv.runIn = v; VMH:QueueAuraScan() end)
+    page:Place(runIn, 12, 48)
     page:Place(W.Dropdown(page.frame, "Announce when", 260, {
         { value = "class", label = "I'm a healing class (or healer role)" },
         { value = "role", label = "My group role is Healer" },

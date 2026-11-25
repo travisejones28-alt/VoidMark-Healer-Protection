@@ -95,8 +95,9 @@ function CC:Collect()
     local found = {}
     local bySpell = {}
     local unnamed = {}   -- Loss of Control entries whose spell ID was hidden
+    local live = VMH:IsActiveHere()
 
-    local n = locCount()
+    local n = live and locCount() or nil
     self.capability.loc = n ~= nil
     for i = 1, (n or 0) do
         local d = locEntry(i)
@@ -119,7 +120,7 @@ function CC:Collect()
         end
     end
 
-    if not VMH.AurasHidden() then
+    if live and not VMH.AurasHidden() then
         self.capability.auras = true
         for i = 1, 40 do
             local a = VMH.GetAura("player", i, "HARMFUL")
@@ -167,7 +168,7 @@ function CC:Collect()
                 end
             end
         end
-    else
+    elseif live then
         self.capability.auras = false
     end
 

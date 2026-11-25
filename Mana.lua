@@ -112,7 +112,7 @@ end
 ------------------------------------------------------------------------
 function M:Evaluate()
     self.pending = false
-    if not VMH.loaded or not usesMana() then return end
+    if not VMH.loaded or not usesMana() or not VMH:IsActiveHere() then return end
     if VMH.Safe(_G.UnitIsDeadOrGhost, "player") == true then return end
     local a = VMH.db.alerts
     local hyst = VMH.db.announce.hysteresis or 10

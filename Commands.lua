@@ -75,7 +75,7 @@ function Cmd:StatusText()
     local hp = VMH.Health:Percent()
     local lines = {
         "Version " .. VMH.version .. "   Profile: " .. tostring(VMH.Profiles:Current()) .. "   Enabled: " .. yesno(VMH.db.general.enabled),
-        "Healer alerts active: " .. yesno(VMH:IsHealerActive()) .. "   Location: " .. ctx.instanceType .. (ctx.pvp and " (PvP)" or "") ..
+        "Running here: " .. yesno(VMH:IsActiveHere()) .. "   Healer alerts active: " .. yesno(VMH:IsHealerActive()) .. "   Location: " .. ctx.instanceType .. (ctx.pvp and " (PvP)" or "") ..
             "   Group: " .. (ctx.raid and "raid" or (ctx.grouped and "party" or "none")),
         "Loss of Control data readable: " .. yesno(cc.loc) .. "   Auras readable: " .. yesno(not VMH.AurasHidden()),
         "Mana readable: " .. (mana and (mana .. "%") or "|cffff5050hidden - spell fallback|r") ..
@@ -90,6 +90,11 @@ end
 -- One plain line for the General tab.
 function Cmd:ShortStatus()
     if not VMH.db.general.enabled then return "|cffff5050Turned off|r (Enable VoidMark Healer above)." end
+    if not VMH:IsActiveHere() then
+        local label = VMH.sv.runIn
+        for _, o in ipairs(VMH.RUN_IN) do if o.value == VMH.sv.runIn then label = o.label end end
+        return "|cffffd200Paused here|r - set to run in: " .. label .. "."
+    end
     if not VMH:IsHealerActive() then
         return "|cffffd200Waiting|r - alerts start when you're healing (see \"Announce when\")."
     end
@@ -106,6 +111,7 @@ local HELP = {
     "/vmh stop - end simulations",
     "/vmh preview - toggle the display preview",
     "/vmh status - detection and API status",
+    "/vmh world - toggle open-world use on/off",
     "/vmh debug - toggle local debug messages   /vmh debug log - show recent debug lines",
     "/vmh reset confirm - reset all settings (statistics kept)",
 }
@@ -129,6 +135,11 @@ function Cmd:Handle(msg)
     elseif cmd == "preview" then
         VMH.Display:SetPreview(not VMH.Display.preview)
         VMH:Print("Display preview " .. (VMH.Display.preview and "on" or "off"))
+    elseif cmd == "world" then
+        VMH.sv.runIn = (VMH.sv.runIn == "everywhere") and "dungeonraid" or "everywhere"
+        VMH:Print(VMH.sv.runIn == "everywhere" and "Now running everywhere, open world included."
+            or "Now running in dungeons and raids only.")
+        VMH:QueueAuraScan()
     elseif cmd == "status" then
         for line in self:StatusText():gmatch("[^\n]+") do VMH:Print(line) end
     elseif cmd == "debug" then

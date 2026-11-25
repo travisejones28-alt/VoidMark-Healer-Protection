@@ -71,6 +71,7 @@ preview mode.
 | `/vmh stop` | End simulations |
 | `/vmh preview` | Display preview |
 | `/vmh status` | What the game is letting the addon read right now |
+| `/vmh world` | Turn open-world use on/off (default: dungeons and raids only) |
 | `/vmh debug` / `/vmh debug log` | Local debug messages |
 | `/vmh reset confirm` | Reset all settings (statistics kept) |
 
@@ -107,6 +108,10 @@ python tools/package.py               # build + verify dist/VoidMarkHealer.zip
 Tests run against a mocked client (including secret values). They do not replace an in-game check.
 
 ## Changes
+
+**1.0.2** - New "Run in" setting (General tab, account-wide): Dungeons and raids only (default), add battlegrounds/arenas,
+or everywhere. Outside those places nothing is detected, shown, announced or counted. `/vmh world` toggles open world on/off.
+Simulations and Test buttons still work anywhere.
 
 **1.0.1** - Countdown has its own tab; visible scroll bar on long pages; shorter alert names; plain one-line status on
 General (full status via button or `/vmh status`); "Where" renamed "Use in"; Reset lifetime confirm times out; sliders

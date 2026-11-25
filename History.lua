@@ -16,7 +16,7 @@ function H:Init()
 end
 
 -- Only counts while you're healing (not as Shadow, not on a non-healing role).
-function H:Enabled() return VMH.db and VMH.db.history.enabled and VMH:IsHealerActive() end
+function H:Enabled() return VMH.db and VMH.db.history.enabled and VMH:IsActiveHere() and VMH:IsHealerActive() end
 
 local function bump(field, amount, key)
     if not H:Enabled() then return end

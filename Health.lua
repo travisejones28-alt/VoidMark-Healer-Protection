@@ -19,6 +19,7 @@ end
 function Hm:Evaluate()
     self.pending = false
     if not VMH.loaded then return end
+    if not VMH:IsActiveHere() then self.state = "ok"; return end
     if self.dead then
         if VMH.Safe(_G.UnitIsDeadOrGhost, "player") == false then self:OnAlive() end
         return

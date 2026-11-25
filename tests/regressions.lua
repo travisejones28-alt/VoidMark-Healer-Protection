@@ -55,6 +55,8 @@ local function fresh()
     for k in pairs(VMH.Mana) do if k == "pending" then VMH.Mana.pending = false end end
     VMH.Health.pending, VMH.Threat.pending = false, false
     boot()
+    -- most tests run in the open world mock; let them detect there
+    VMH.sv.runIn = "everywhere"
     S.chat, S.prints, S.warnings = {}, {}, {}
 end
 local function addLoC(locType, spellID, duration, school, text)
@@ -644,6 +646,53 @@ test("config: countdown tab, scroll bar on long pages, short status", function()
     eq(C.pages.cc.scroll.vscroll, 50, "bar scrolls the page")
     assert(VMH.Commands:ShortStatus():find("Ready"), VMH.Commands:ShortStatus())
     C.frame:Hide()
+end)
+
+test("run in: dungeons and raids only is the default and pauses the open world", function()
+    fresh()
+    VoidMarkHealerDB.runIn = nil
+    VMH.Profiles:Load()
+    eq(VMH.sv.runIn, "dungeonraid", "default")
+    VMH.Profiles:Select("Dungeon", true)
+    addLoC("STUN", 408, 6)
+    S.mana = 400; Emit("UNIT_POWER_UPDATE", "player")
+    S.plates = { "nameplate1" }
+    S.units.nameplate1 = { name = "A", hostile = true, isPlayer = true, guid = "A", targetsPlayer = true }
+    S.units.nameplate2 = { name = "B", hostile = true, isPlayer = true, guid = "B", targetsPlayer = true }
+    S.plates = { "nameplate1", "nameplate2" }
+    Emit("NAME_PLATE_UNIT_ADDED", "nameplate1")
+    play(7)
+    eq(#S.chat, 0, "nothing in the open world")
+    eq(VMH.History.session.cc, 0, "nothing counted")
+    assert(not VMH.Display.frame.shown, "display hidden")
+    -- simulations still work for setup
+    SlashCmdList.VOIDMARKHEALER("test silence")
+    Advance(0.5)
+    assert(has(S.prints, "[SIM -> PARTY]|r Healer silenced! (8s)"), "sim works in world")
+    SlashCmdList.VOIDMARKHEALER("stop")
+    Advance(0.5)
+    -- inside a dungeon it runs
+    S.loc = {}
+    S.instance, S.instanceType = true, "party"
+    Emit("PLAYER_ENTERING_WORLD", false, false)
+    Advance(1)
+    addLoC("SILENCE", 15487, 6)
+    Advance(0.5)
+    eq(count(chatTexts(), "Healer silenced! (6s)"), 1, "runs in dungeon")
+end)
+
+test("run in: battlegrounds only with the instances option", function()
+    fresh()
+    VMH.Profiles:Select("PvP", true)
+    S.instance, S.instanceType = true, "pvp"
+    VMH.sv.runIn = "dungeonraid"
+    assert(not VMH:IsActiveHere())
+    VMH.sv.runIn = "instances"
+    assert(VMH:IsActiveHere())
+    SlashCmdList.VOIDMARKHEALER("world")
+    eq(VMH.sv.runIn, "everywhere")
+    SlashCmdList.VOIDMARKHEALER("world")
+    eq(VMH.sv.runIn, "dungeonraid")
 end)
 
 test("not a healer: alerts held back", function()

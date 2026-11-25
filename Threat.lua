@@ -70,7 +70,7 @@ end
 function T:Evaluate()
     self.pending = false
     if not VMH.loaded then return end
-    if VMH.Safe(_G.UnitIsDeadOrGhost, "player") == true then
+    if not VMH:IsActiveHere() or VMH.Safe(_G.UnitIsDeadOrGhost, "player") == true then
         self.aggro, self.threatHigh, self.multi = false, false, false
         return
     end
