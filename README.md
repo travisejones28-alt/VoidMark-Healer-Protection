@@ -72,7 +72,7 @@ preview mode.
 | `/vmh preview` | Display preview |
 | `/vmh status` | What the game is letting the addon read right now |
 | `/vmh world` | Turn open-world use on/off (default: dungeons and raids only) |
-| `/vmh debug` / `/vmh debug log` | Local debug messages |
+| `/vmh debug` / `/vmh debug log` / `/vmh debug clear` | Live debug messages / last 25 saved lines / clear |
 | `/vmh reset confirm` | Reset all settings (statistics kept) |
 
 Simulations run through the real detection, countdown and display, print with a `[SIM]` tag, and never post to a group.
@@ -108,6 +108,10 @@ python tools/package.py               # build + verify dist/VoidMarkHealer.zip
 Tests run against a mocked client (including secret values). They do not replace an in-game check.
 
 ## Changes
+
+**1.0.4** - Saved debug trail: every crowd-control sighting (with spell ID and source), every alert and why it was
+sent or held back, and any Loss of Control entry the addon ignored. Survives /reload. `/vmh debug log` shows the
+last 25 lines, `/vmh debug clear` empties it.
 
 **1.0.3** - Group messages start with the {skull} raid icon by default (Announcements > Message prefix; clear it for none).
 Raid-icon codes ({skull}, {cross}, {rt1}-{rt8}...) also work inside any alert text.

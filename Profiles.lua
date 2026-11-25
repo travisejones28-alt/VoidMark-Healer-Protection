@@ -57,6 +57,13 @@ function P:Load()
     if not db.profiles[cdb.profile] then cdb.profile = "Dungeon" end
     VMH.db = db.profiles[cdb.profile]
     VMH.sv, VMH.csv = db, cdb
+    -- persistent debug trail: keep lines written before saved data loaded
+    db.log = type(db.log) == "table" and db.log or {}
+    if VMH.debugLog ~= db.log then
+        for _, l in ipairs(VMH.debugLog or {}) do db.log[#db.log + 1] = l end
+        VMH.debugLog = db.log
+    end
+    VMH:Debug("---- loaded v" .. VMH.version .. ", profile " .. tostring(cdb.profile))
     self.lastKey = nil
 end
 

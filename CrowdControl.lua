@@ -11,6 +11,13 @@ local D = VMH.SpellData
 local R = VMH.Readable
 
 CC.active = {}
+CC.noted = {}
+local function note(key, msg)
+    local t = VMH.Now()
+    if CC.noted[key] and t - CC.noted[key] < 15 then return end
+    CC.noted[key] = t
+    VMH:Debug(msg)
+end
 CC.external = {}
 CC.sims = {}
 CC.capability = { loc = false, auras = false }
@@ -99,10 +106,18 @@ function CC:Collect()
 
     local n = live and locCount() or nil
     self.capability.loc = n ~= nil
+    if live and n == nil and C_LossOfControl then note("locHidden", "Loss of Control data hidden by the game") end
     for i = 1, (n or 0) do
         local d = locEntry(i)
+        if not d or not d.locType then
+            note("locEntry" .. i, "Loss of Control entry " .. i .. " unreadable")
+        end
         if d and d.locType then
             local kind = classify(d.spellID, d.locType, d.text)
+            if not kind then
+                note("ign" .. tostring(d.locType) .. tostring(d.spellID), "Loss of Control ignored: " .. tostring(d.locType) ..
+                    " spell " .. tostring(d.spellID) .. " (" .. tostring(d.text) .. ")")
+            end
             if kind then
                 local expires
                 if type(d.remaining) == "number" and d.remaining > 0 then expires = t + d.remaining
@@ -252,7 +267,7 @@ function CC:OnAdded(e)
     if e.type == "LOCKOUT" and not e.source and VMH.Interrupts then
         e.source = VMH.Interrupts:RecentInterrupter()
     end
-    VMH:Debug(string.format("CC added: %s [%s] via %s, %s left%s", tostring(e.name), e.type, tostring(e.via),
+    VMH:Debug(string.format("CC added: %s (spell %s) [%s] via %s, %s left%s", tostring(e.name), tostring(e.spellID), e.type, tostring(e.via),
         tostring(self:Remaining(e) and string.format("%.1fs", self:Remaining(e)) or "unknown"),
         e.source and (" from " .. e.source) or ""))
     VMH.History:RecordCC(e)

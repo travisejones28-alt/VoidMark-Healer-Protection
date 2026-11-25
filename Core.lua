@@ -6,7 +6,7 @@
 local ADDON, VMH = ...
 VoidMarkHealer = VMH
 VMH.name = ADDON
-VMH.version = "1.0.3"
+VMH.version = "1.0.4"
 VMH.modules = {}
 VMH.debugLog = {}
 VMH.session = { started = nil }
@@ -80,11 +80,14 @@ function VMH:Print(msg)
     if frame and frame.AddMessage then frame:AddMessage(PREFIX .. tostring(msg)) end
 end
 
+-- The trail is saved with your settings, so it survives /reload and logout
+-- (see /vmh debug log). Kept short: last 150 lines.
 function VMH:Debug(msg)
-    local line = string.format("%.1f %s", VMH.Now(), tostring(msg))
+    local stamp = (type(date) == "function" and date("%H:%M:%S")) or string.format("%.1f", VMH.Now())
+    local line = stamp .. " " .. tostring(msg)
     local log = self.debugLog
     log[#log + 1] = line
-    if #log > 60 then table.remove(log, 1) end
+    while #log > 150 do table.remove(log, 1) end
     if self.debugMode then
         local frame = _G.DEFAULT_CHAT_FRAME
         if frame and frame.AddMessage then frame:AddMessage("|cff777777[VMH debug]|r " .. tostring(msg)) end

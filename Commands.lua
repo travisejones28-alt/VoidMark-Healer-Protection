@@ -145,7 +145,11 @@ function Cmd:Handle(msg)
     elseif cmd == "debug" then
         if rest == "log" then
             local log = VMH.debugLog
-            for i = math.max(1, #log - 14), #log do VMH:Print("|cff888888" .. log[i] .. "|r") end
+            VMH:Print("Last " .. math.min(25, #log) .. " lines (saved across /reload):")
+            for i = math.max(1, #log - 24), #log do VMH:Print("|cff888888" .. log[i] .. "|r") end
+        elseif rest == "clear" then
+            for i = #VMH.debugLog, 1, -1 do VMH.debugLog[i] = nil end
+            VMH:Print("Debug trail cleared.")
         else
             VMH.debugMode = not VMH.debugMode
             VMH:Print("Debug " .. (VMH.debugMode and "on (local only)" or "off"))

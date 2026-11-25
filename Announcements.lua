@@ -237,6 +237,27 @@ end
 -- opts: test (button/command), sim (simulation), expires (drop if late),
 --       dedupe (custom duplicate key), ignoreCooldown
 function A:Alert(key, vars, opts)
+    local ok, why = self:AlertInner(key, vars, opts)
+    opts = opts or {}
+    if not opts.test then
+        local extra = ""
+        if why == "not healer" then
+            extra = " (role " .. tostring(VMH.Safe(_G.UnitGroupRolesAssigned, "player")) .. ", setting " ..
+                tostring(VMH.db and VMH.db.general.healerOnly) .. (VMH.HasPlayerBuff(15473) and ", Shadowform" or "") .. ")"
+        elseif why == "not active here" then
+            local _, itype = VMH.Safe(_G.IsInInstance)
+            extra = " (location " .. tostring(itype) .. ", run in " .. tostring(VMH.sv and VMH.sv.runIn) .. ")"
+        elseif why == "sent" then
+            local list = self:ResolveChannels(VMH.db.alerts[key] and VMH.db.alerts[key].channels)
+            extra = " -> " .. (#list > 0 and table.concat(list, "+") or "no group channel") ..
+                (VMH.db.announce.outgoing and "" or " (group chat off)")
+        end
+        VMH:Debug("alert " .. key .. ": " .. tostring(why) .. extra)
+    end
+    return ok, why
+end
+
+function A:AlertInner(key, vars, opts)
     opts = opts or {}
     local def = VMH.ALERT_BY_KEY[key]
     local db = VMH.db

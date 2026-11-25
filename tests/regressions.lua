@@ -54,6 +54,9 @@ local function fresh()
     VMH.debugLog = {}
     for k in pairs(VMH.Mana) do if k == "pending" then VMH.Mana.pending = false end end
     VMH.Health.pending, VMH.Threat.pending = false, false
+    VMH.Mana.scanQueued = false
+    VMH:RunAuraScan() -- the harness wipes timers between tests; clear the queued-scan flag
+    VMH.Announce.flushScheduled = false
     boot()
     -- most tests run in the open world mock; let them detect there
     VMH.sv.runIn = "everywhere"
@@ -713,6 +716,27 @@ test("skull prefix: on by default, old blank prefixes upgraded once, custom kept
     VoidMarkHealerDB.profiles.Dungeon.announce.prefix = ""
     VMH.Profiles:Load()
     eq(VoidMarkHealerDB.profiles.Dungeon.announce.prefix, "", "turning it off sticks")
+end)
+
+test("debug trail explains a missed alert and survives reload", function()
+    fresh()
+    VMH.Profiles:Select("Dungeon", true)
+    S.role = "DAMAGER"
+    addLoC("SILENCE", 6726, 5)
+    Advance(0.5)
+    S.role = "NONE"
+    local log = table.concat(VMH.debugLog, "\n")
+    assert(log:find("CC added: Silence", 1, true) or log:find("CC added: nil (spell 6726)", 1, true), log)
+    assert(log:find("alert silence: not healer (role DAMAGER", 1, true), log)
+    S.loc = { { locType = "PACIFY", spellID = 999, displayText = "Pacified", startTime = NOW, duration = 5 } }
+    Emit("LOSS_OF_CONTROL_UPDATE")
+    Advance(0.3)
+    assert(table.concat(VMH.debugLog, "\n"):find("Loss of Control ignored: PACIFY", 1, true))
+    -- reload keeps the trail
+    local before = #VoidMarkHealerDB.log
+    VMH.Profiles:Load()
+    assert(#VMH.debugLog >= before, "trail kept")
+    S.loc = {}
 end)
 
 test("not a healer: alerts held back", function()
