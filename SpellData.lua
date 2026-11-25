@@ -134,6 +134,18 @@ D.LOC_TYPES = {
     SILENCE = "SILENCE", PACIFYSILENCE = "SILENCE", SCHOOL_INTERRUPT = "LOCKOUT", ROOT = "ROOT",
 }
 
+-- Debuff tooltip words (line 2+, the effect description). Lets any mob or
+-- player spell be recognized without a spell list. Checked in this order.
+D.TOOLTIP_WORDS = {
+    { "silenced", "SILENCE" }, { "cannot cast", "SILENCE" }, { "can't cast", "SILENCE" }, { "unable to cast", "SILENCE" },
+    { "polymorphed", "POLYMORPH" }, { "sapped", "SAP" }, { "horrified", "HORROR" },
+    { "stunned", "STUN" }, { "feared", "FEAR" }, { "fleeing", "FEAR" }, { "running in fear", "FEAR" },
+    { "asleep", "SLEEP" }, { "sleeping", "SLEEP" }, { "disoriented", "DISORIENT" }, { "confused", "DISORIENT" },
+    { "incapacitated", "INCAPACITATE" }, { "charmed", "CHARM" }, { "mind controlled", "CHARM" }, { "controlled by", "CHARM" },
+    { "blinded", "BLIND" }, { "cycloned", "CYCLONE" },
+    { "immobilized", "ROOT" }, { "rooted", "ROOT" }, { "frozen in place", "ROOT" }, { "cannot move", "ROOT" },
+}
+
 -- Display text keywords help split CONFUSE into the categories players expect.
 D.TEXT_HINTS = {
     { "olymorph", "POLYMORPH" }, { "apped", "SAP" }, { "lind", "BLIND" }, { "sleep", "SLEEP" },

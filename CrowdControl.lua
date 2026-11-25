@@ -66,6 +66,68 @@ local function classify(spellID, locType, text)
 end
 CC.Classify = classify
 
+------------------------------------------------------------------------
+-- Tooltip fallback for debuffs not in the spell list (mob silences, stuns...).
+-- One lookup per distinct debuff; results are cached.
+------------------------------------------------------------------------
+CC.tipCache = {}
+local scanTip
+local function tooltipLines(index, auraInstanceID)
+    local lines = {}
+    if C_TooltipInfo then
+        local data
+        if auraInstanceID and type(C_TooltipInfo.GetUnitDebuffByAuraInstanceID) == "function" then
+            data = VMH.Safe(C_TooltipInfo.GetUnitDebuffByAuraInstanceID, "player", auraInstanceID)
+        end
+        if not data and type(C_TooltipInfo.GetUnitDebuff) == "function" then
+            data = VMH.Safe(C_TooltipInfo.GetUnitDebuff, "player", index)
+        end
+        if type(data) == "table" and type(data.lines) == "table" then
+            for i, line in ipairs(data.lines) do
+                local text = type(line) == "table" and R(line.leftText)
+                if i > 1 and type(text) == "string" then lines[#lines + 1] = text end
+            end
+            return lines
+        end
+    end
+    -- older clients: hidden tooltip
+    if not scanTip then
+        local ok, tip = pcall(CreateFrame, "GameTooltip", "VoidMarkHealerScanTip", nil, "GameTooltipTemplate")
+        if not ok or not tip then return lines end
+        scanTip = tip
+    end
+    local ok = pcall(function()
+        scanTip:SetOwner(_G.WorldFrame, "ANCHOR_NONE")
+        scanTip:ClearLines()
+        scanTip:SetUnitDebuff("player", index)
+    end)
+    if not ok then return lines end
+    for i = 2, 6 do
+        local fs = _G["VoidMarkHealerScanTipTextLeft" .. i]
+        local text = fs and R(fs:GetText())
+        if type(text) == "string" then lines[#lines + 1] = text end
+    end
+    return lines
+end
+
+function CC:ClassifyByTooltip(index, a)
+    local cacheKey = a.spellId or a.name
+    if cacheKey and self.tipCache[cacheKey] ~= nil then return self.tipCache[cacheKey] or nil end
+    local lines = tooltipLines(index, a.auraInstanceID)
+    if #lines == 0 then return nil end -- unreadable now: try again next scan
+    local kind = false
+    local text = table.concat(lines, " "):lower()
+    for _, w in ipairs(D.TOOLTIP_WORDS) do
+        if text:find(w[1], 1, true) then kind = w[2]; break end
+    end
+    if cacheKey then
+        self.tipCache[cacheKey] = kind
+        VMH:Debug("debuff " .. tostring(a.name) .. " (spell " .. tostring(a.spellId) .. ") read from tooltip: " ..
+            (kind or "not crowd control"))
+    end
+    return kind or nil
+end
+
 local function spellInfo(spellID)
     if not spellID then return nil, nil end
     local name = D.SpellName(spellID)
@@ -141,6 +203,7 @@ function CC:Collect()
             local a = VMH.GetAura("player", i, "HARMFUL")
             if not a then break end
             local kind = (a.spellId and D.CC[a.spellId]) or D.TypeForName(a.name)
+            if not kind and (a.spellId or a.name) then kind = self:ClassifyByTooltip(i, a) end
             if kind then
                 local source = a.sourceUnit and VMH.UnitFullName(a.sourceUnit) or nil
                 local expires = (type(a.expirationTime) == "number" and a.expirationTime > 0) and a.expirationTime or nil

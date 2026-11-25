@@ -81,7 +81,8 @@ Simulations run through the real detection, countdown and display, print with a 
 
 Forever has no combat log, and can hide values from addons in combat. VoidMark Healer never guesses:
 
-- **Crowd control** comes from Loss of Control data, then your debuffs. If the game hides the duration,
+- **Crowd control** comes from Loss of Control data, then your debuffs (by spell ID, or by the debuff's tooltip text
+  for mob spells). If the game hides the duration,
   the alert has no number and the countdown simply waits for the effect to end.
 - **Interrupts**: from Loss of Control lockout data. If that is hidden, a lockout is still proven by checking
   whether the interrupted spell is on a cooldown longer than its own; otherwise nothing is announced.
@@ -109,6 +110,10 @@ python tools/package.py               # build + verify dist/VoidMarkHealer.zip
 Tests run against a mocked client (including secret values). They do not replace an in-game check.
 
 ## Changes
+
+**1.0.8** - Mob crowd control (e.g. Shrieking Banshee's silence) is now caught even when the game hides Loss of
+Control data: debuffs not in the spell list are read from their tooltip ("Silenced.", "Stunned.", "Feared."...).
+Once per debuff, cached.
 
 **1.0.7** - Out-of-range alert removed entirely (too spammy). Its saved settings are cleaned up.
 

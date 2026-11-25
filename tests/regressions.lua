@@ -813,6 +813,36 @@ test("old saved range settings are cleaned up", function()
     eq(VoidMarkHealerDB.rangeWhisperSet, nil)
 end)
 
+test("mob silence not in the spell list is read from its tooltip (Shrieking Banshee)", function()
+    fresh()
+    VMH.Profiles:Select("Dungeon", true)
+    S.locSecret = true
+    VMH.CrowdControl.tipCache = {}
+    S.auras.HARMFUL[1] = { name = "Disease Cloud", spellId = 99001, duration = 30, expirationTime = NOW + 30, tip = "Reduces Stamina by 10." }
+    S.auras.HARMFUL[2] = { name = "Deafening Screech", spellId = 99002, duration = 8, expirationTime = NOW + 8, tip = "Silenced." }
+    Emit("UNIT_AURA", "player")
+    Advance(0.4)
+    eq(count(chatTexts(), "Healer silenced! (8s)"), 1, table.concat(chatTexts(), " | "))
+    local calls = TIP_CALLS
+    Emit("UNIT_AURA", "player")
+    Advance(0.4)
+    eq(TIP_CALLS, calls, "tooltip read once per debuff (cached)")
+    S.auras.HARMFUL[2] = nil
+    Emit("UNIT_AURA", "player")
+    Advance(1.5)
+    eq(count(chatTexts(), "healing resumed"), 1)
+    -- hidden tooltip text: no guess, retried later
+    VMH.CrowdControl.tipCache = {}
+    S.tipSecret = true
+    S.auras.HARMFUL[2] = { name = "Mystery", spellId = 99003, duration = 5, expirationTime = NOW + 5, tip = "Stunned." }
+    Emit("UNIT_AURA", "player"); Advance(0.4)
+    eq(count(chatTexts(), "stunned"), 0)
+    S.tipSecret = false
+    Emit("UNIT_AURA", "player"); Advance(0.4)
+    eq(count(chatTexts(), "Healer stunned!"), 1, "picked up once readable")
+    noErrors()
+end)
+
 test("not a healer: alerts held back", function()
     fresh()
     VMH.Profiles:Select("Dungeon", true)

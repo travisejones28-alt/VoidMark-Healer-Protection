@@ -217,6 +217,14 @@ C_NamePlate = { GetNamePlates = function()
     for _, t in ipairs(S.plates) do out[#out + 1] = { namePlateUnitToken = t } end
     return out
 end }
+TIP_CALLS = 0
+C_TooltipInfo = { GetUnitDebuff = function(unit, i)
+    TIP_CALLS = TIP_CALLS + 1
+    local a = S.auras.HARMFUL[i]
+    if not a or not a.tip then return nil end
+    if S.tipSecret then return { lines = { { leftText = SECRET }, { leftText = SECRET } } } end
+    return { lines = { { leftText = a.name }, { leftText = a.tip } } }
+end }
 C_Secrets = { ShouldAurasBeSecret = function() return S.aurasHidden end }
 C_UnitAuras = { GetAuraDataByIndex = function(unit, i, filter)
     if unit ~= "player" then return nil end
