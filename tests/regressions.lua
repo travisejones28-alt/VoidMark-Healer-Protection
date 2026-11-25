@@ -57,6 +57,7 @@ local function fresh()
     VMH.Mana.scanQueued = false
     VMH:RunAuraScan() -- the harness wipes timers between tests; clear the queued-scan flag
     VMH.Announce.flushScheduled = false
+    VMH.Announce.held, VMH.Announce.watching = {}, false
     boot()
     -- most tests run in the open world mock; let them detect there
     VMH.sv.runIn = "everywhere"
@@ -737,6 +738,32 @@ test("debug trail explains a missed alert and survives reload", function()
     VMH.Profiles:Load()
     assert(#VMH.debugLog >= before, "trail kept")
     S.loc = {}
+end)
+
+test("chat lockdown: OOM and death post after unlock only if still true", function()
+    fresh()
+    VMH.Profiles:Select("Dungeon", true)
+    S.chatLocked = true
+    S.mana = 400; Emit("UNIT_POWER_UPDATE", "player"); Advance(0.5)
+    VMH.Announce:Alert("aggro", {})
+    Advance(1.5)
+    eq(#S.chat, 0, "nothing sent while locked")
+    assert(has(S.prints, "will post when it unlocks"), "user told it is held")
+    Advance(5)
+    S.chatLocked = false
+    Advance(3)
+    local c = chatTexts()
+    eq(count(c, "Out of mana! (8%)"), 1, "OOM posted after unlock")
+    eq(count(c, "aggro"), 0, "stale aggro not posted")
+    -- recovered before unlock: dropped
+    S.chat = {}
+    S.chatLocked = true
+    Advance(25)
+    S.dead = true; Emit("PLAYER_DEAD"); Advance(1.5)
+    S.dead = false; Emit("PLAYER_ALIVE"); Advance(0.5)
+    S.chatLocked = false
+    Advance(4)
+    eq(count(chatTexts(), "Healer is dead!"), 0, "death not posted after revive")
 end)
 
 test("not a healer: alerts held back", function()

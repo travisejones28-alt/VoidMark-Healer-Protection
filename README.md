@@ -90,7 +90,8 @@ Forever has no combat log, and can hide values from addons in combat. VoidMark H
 - **Mana**: real percentage when readable. When hidden, alerts use whether your own spells are castable
   (costs learned out of combat) and the message leaves the percentage out.
 - **Health alerts** pause while health is hidden. Death and resurrection alerts always work.
-- **Say / Yell** only work inside instances (game rule). **Group chat lockdown**: messages show locally instead.
+- **Say / Yell** only work inside instances (game rule). **Group chat lockdown** (the game blocks addon group chat, e.g. during boss fights): alerts show for you;
+  mana/death alerts post once chat unlocks if still true. No addon can bypass this.
 - **Line of sight / range** only count failed *helpful* spells (a Mind Blast out of sight is ignored). The name is your
   mouseover or friendly target, so with click-casting it's the frame you clicked.
 - **Low/critical health** alerts only fire in combat.
@@ -108,6 +109,10 @@ python tools/package.py               # build + verify dist/VoidMarkHealer.zip
 Tests run against a mocked client (including secret values). They do not replace an in-game check.
 
 ## Changes
+
+**1.0.5** - Chat lockdown: when the game blocks addon group chat (e.g. boss fights), alerts still show for you;
+out of mana, low mana, death and self-res are posted when chat unlocks - only if still true. Crowd control and aggro
+are not posted late (they'd be wrong by then).
 
 **1.0.4** - Saved debug trail: every crowd-control sighting (with spell ID and source), every alert and why it was
 sent or held back, and any Loss of Control entry the addon ignored. Survives /reload. `/vmh debug log` shows the

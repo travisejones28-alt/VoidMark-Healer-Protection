@@ -170,7 +170,10 @@ function A:Flush()
     local entry = table.remove(q, 1)
     self.lastSend = now
     if chatLocked() then
-        VMH:Print(entry.text .. " |cff888888(group chat is locked by the game right now)|r")
+        local held = self:Hold(entry)
+        VMH:Print(entry.text .. " |cff888888(group chat is locked by the game right now" ..
+            (held and " - will post when it unlocks if still true)|r" or ")|r"))
+        VMH:Debug("chat locked: " .. entry.text .. (held and " (held)" or " (shown locally)"))
     else
         for _, ct in ipairs(entry.chatTypes) do
             if self:StillValid(ct) then send(entry.text, ct)
@@ -186,7 +189,55 @@ function A:Schedule(delay)
     VMH.After(math.max(0.05, delay), function() A:Flush() end)
 end
 
-function A:Enqueue(text, chatTypes, prio, expires)
+------------------------------------------------------------------------
+-- Chat lockdown: the game sometimes blocks addon group chat (e.g. boss
+-- fights). Crowd control and aggro are stale by the time it lifts, so they
+-- are only shown locally. A few states are still worth posting afterwards,
+-- and only if they are still true at that moment.
+------------------------------------------------------------------------
+local STILL_TRUE = {
+    death = function() return VMH.Health.dead end,
+    selfRes = function() return VMH.Health.dead end,
+    oom = function() return VMH.Mana.state == "oom" end,
+    lowMana = function() return VMH.Mana.state ~= "ok" end,
+}
+A.held = {}
+
+function A:Hold(entry)
+    if not entry.key or not STILL_TRUE[entry.key] then return false end
+    for i = #self.held, 1, -1 do
+        if self.held[i].key == entry.key then table.remove(self.held, i) end
+    end
+    entry.heldAt = VMH.Now()
+    self.held[#self.held + 1] = entry
+    if not self.watching then
+        self.watching = true
+        VMH.After(2, function() A:CheckHeld() end)
+    end
+    return true
+end
+
+function A:CheckHeld()
+    local now = VMH.Now()
+    for i = #self.held, 1, -1 do
+        local e = self.held[i]
+        if now - e.heldAt > 120 or not STILL_TRUE[e.key]() then table.remove(self.held, i) end
+    end
+    if #self.held == 0 then self.watching = false; return end
+    if chatLocked() then
+        VMH.After(2, function() A:CheckHeld() end)
+        return
+    end
+    self.watching = false
+    local list = self.held
+    self.held = {}
+    for _, e in ipairs(list) do
+        VMH:Debug("chat unlocked, posting held: " .. e.text)
+        self:Enqueue(e.text, e.chatTypes, e.prio, VMH.Now() + 10, e.key)
+    end
+end
+
+function A:Enqueue(text, chatTypes, prio, expires, key)
     local q = self.queue
     -- Routine alerts never pile up behind a burst; keep at most 6 waiting.
     if #q >= 6 then
@@ -194,7 +245,7 @@ function A:Enqueue(text, chatTypes, prio, expires)
         if q[#q].prio > prio then return end
         table.remove(q)
     end
-    q[#q + 1] = { text = text, chatTypes = chatTypes, prio = prio, created = VMH.Now(),
+    q[#q + 1] = { text = text, chatTypes = chatTypes, prio = prio, key = key, created = VMH.Now(),
         expires = expires or (VMH.Now() + (prio >= 4 and 8 or 5)) }
     self:Flush()
 end
@@ -308,7 +359,7 @@ function A:AlertInner(key, vars, opts)
     end
     if selfPrint then VMH:Print(text) end
     if outgoing and #chatTypes > 0 then
-        self:Enqueue(msg, chatTypes, def.prio, opts.expires)
+        self:Enqueue(msg, chatTypes, def.prio, opts.expires, key)
     elseif #chatTypes > 0 then
         VMH:Debug("outgoing disabled: " .. msg)
     end
