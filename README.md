@@ -111,6 +111,11 @@ Tests run against a mocked client (including secret values). They do not replace
 
 ## Changes
 
+**1.0.9** - Last-resort detection when Forever hides all crowd-control data in combat: if your cheapest heal is greyed
+out (not for mana, not dead/mounted/in a form/Shadowform), "Healer can't cast heals!" is announced, with recovery when
+it's castable again. Never double-alerts when the real effect is readable. Every Loss of Control event now writes a
+snapshot of what the game let the addon read to `/vmh debug log`.
+
 **1.0.8** - Mob crowd control (e.g. Shrieking Banshee's silence) is now caught even when the game hides Loss of
 Control data: debuffs not in the spell list are read from their tooltip ("Silenced.", "Stunned.", "Feared."...).
 Once per debuff, cached.

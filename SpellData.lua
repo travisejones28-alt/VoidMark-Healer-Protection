@@ -22,6 +22,7 @@ D.TYPES = {
     INCAPACITATE = { alert = "incapacitate", label = "Incapacitated", blocks = true,  order = 12 },
     CYCLONE      = { alert = "cyclone",      label = "Cycloned",      blocks = true,  order = 13 },
     OTHER        = { alert = "otherCC",      label = "Can't act",     blocks = true,  order = 14 },
+    NOCAST       = { alert = "cantCast",     label = "Can't cast",    blocks = true,  order = 14 },
     ROOT         = { alert = "root",         label = "Rooted",        blocks = false, order = 15 },
 }
 
@@ -55,6 +56,22 @@ for _, id in ipairs({ 1766, 1767, 1768, 1769, 6552, 6554, 72, 1671, 1672, 2139, 
 
 -- Drink buffs. Names come from these IDs so the check works in any locale.
 D.DRINKS = { 430, 431, 432, 1133, 1135, 1137, 10250, 22734, 24355, 25696, 26261, 26475, 29007, 18233, 23540, 24707 }
+
+-- Rank 1 of each class's direct heals. Names come from these IDs, so every
+-- rank in the spellbook matches. Used for the "can't cast heals" check.
+D.HEALS = { 2050, 2054, 2061, 2060, 139, 635, 19750, 5185, 774, 8936, 331, 8004, 1064 }
+local healNames
+function D.IsHealName(name)
+    if type(name) ~= "string" then return false end
+    if not healNames then
+        healNames = {}
+        for _, id in ipairs(D.HEALS) do
+            local n = D.SpellName and D.SpellName(id)
+            if n then healNames[n] = true end
+        end
+    end
+    return healNames[name] == true
+end
 
 -- Spell school bit flags (lockoutSchool).
 D.SCHOOLS = { [1] = "Physical", [2] = "Holy", [4] = "Fire", [8] = "Nature", [16] = "Frost", [32] = "Shadow", [64] = "Arcane" }

@@ -819,7 +819,7 @@ test("mob silence not in the spell list is read from its tooltip (Shrieking Bans
     S.locSecret = true
     VMH.CrowdControl.tipCache = {}
     S.auras.HARMFUL[1] = { name = "Disease Cloud", spellId = 99001, duration = 30, expirationTime = NOW + 30, tip = "Reduces Stamina by 10." }
-    S.auras.HARMFUL[2] = { name = "Deafening Screech", spellId = 99002, duration = 8, expirationTime = NOW + 8, tip = "Silenced." }
+    S.auras.HARMFUL[2] = { name = "Deafening Screech", spellId = 99002, duration = 8, expirationTime = NOW + 8, tip = "Cannot cast spells." }
     Emit("UNIT_AURA", "player")
     Advance(0.4)
     eq(count(chatTexts(), "Healer silenced! (8s)"), 1, table.concat(chatTexts(), " | "))
@@ -841,6 +841,48 @@ test("mob silence not in the spell list is read from its tooltip (Shrieking Bans
     Emit("UNIT_AURA", "player"); Advance(0.4)
     eq(count(chatTexts(), "Healer stunned!"), 1, "picked up once readable")
     noErrors()
+end)
+
+test("everything hidden: greyed-out heal announces 'can't cast' and recovery", function()
+    fresh()
+    VMH.Profiles:Select("Dungeon", true)
+    S.spellbook = { 1706, 2050, 2061 }          -- Levitate (reagent), Lesser Heal, Flash Heal
+    S.costs = { [1706] = 20, [2050] = 75, [2061] = 380 }
+    Emit("SPELLS_CHANGED"); Advance(1.5)
+    VMH.CrowdControl.healDirty = true
+    S.inCombat = true
+    S.locSecret, S.aurasHidden = true, true
+    S.usable = { [1706] = { usable = false, noMana = false } }  -- no feathers: must never trigger
+    Emit("SPELL_UPDATE_USABLE"); Advance(0.5)
+    eq(#S.chat, 0, "reagent spell ignored")
+    eq(VMH.CrowdControl.healSpell, 2050, "cheapest real heal")
+    S.loc = { { locType = SECRET, spellID = SECRET, startTime = NOW, duration = 6 } }
+    S.usable[2050] = { usable = false, noMana = false }
+    Emit("LOSS_OF_CONTROL_ADDED"); Emit("SPELL_UPDATE_USABLE"); Advance(0.5)
+    eq(count(chatTexts(), "Healer can't cast heals!"), 1, table.concat(chatTexts(), " | "))
+    assert(table.concat(VMH.debugLog, "\n"):find("probe LOSS_OF_CONTROL_ADDED: LoC count HIDDEN", 1, true), "snapshot logged")
+    Advance(4)
+    S.usable[2050] = nil; S.loc = {}
+    Emit("SPELL_UPDATE_USABLE"); Advance(1.5)
+    eq(count(chatTexts(), "healing resumed"), 1)
+    -- out of mana is not "can't cast"
+    S.usable[2050] = { usable = false, noMana = true }
+    Emit("SPELL_UPDATE_USABLE"); Advance(0.5)
+    eq(count(chatTexts(), "can't cast"), 1, "no repeat for OOM")
+end)
+
+test("readable silence wins over the greyed-out check (no double alert)", function()
+    fresh()
+    VMH.Profiles:Select("Dungeon", true)
+    S.spellbook = { 2050 }; S.costs = { [2050] = 75 }
+    Emit("SPELLS_CHANGED"); Advance(1.5)
+    VMH.CrowdControl.healDirty = true
+    S.inCombat = true
+    S.usable = { [2050] = { usable = false, noMana = false } }
+    addLoC("SILENCE", 15487, 5)
+    Emit("SPELL_UPDATE_USABLE"); Advance(0.5)
+    eq(count(chatTexts(), "silenced"), 1)
+    eq(count(chatTexts(), "can't cast"), 0)
 end)
 
 test("not a healer: alerts held back", function()

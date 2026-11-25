@@ -39,6 +39,7 @@ VMH.ALERTS = {
     { key = "cyclone",        tab = "cc", label = "Cyclone",               prio = 5, text = "Healer cycloned! ({dur})" },
     { key = "root",           tab = "cc", label = "Root (movement)",  prio = 2, text = "Healer rooted! ({dur})" },
     { key = "otherCC",        tab = "cc", label = "Other CC", prio = 5, text = "Healer can't act: {spell} ({dur})" },
+    { key = "cantCast",       tab = "cc", label = "Can't cast (hidden CC)", prio = 5, text = "Healer can't cast heals!" },
     { key = "countdown",      tab = "cc", label = "Countdown warnings",    prio = 4, text = "Healing resumes in {dur}!" },
     { key = "recovered",      tab = "cc", label = "Healing resumed", prio = 5, text = "Healer free - healing resumed! {note}" },
 }
@@ -147,7 +148,7 @@ local function setChannels(p, keys, channels)
     end
 end
 local CC_KEYS = { "silence", "interrupt", "stun", "fear", "horror", "polymorph", "sap", "blind", "disorient",
-    "sleep", "mindControl", "incapacitate", "cyclone", "otherCC", "countdown", "recovered" }
+    "sleep", "mindControl", "incapacitate", "cyclone", "otherCC", "cantCast", "countdown", "recovered" }
 VMH.CC_KEYS = CC_KEYS
 
 -- Presets are applied on top of BaseProfile().

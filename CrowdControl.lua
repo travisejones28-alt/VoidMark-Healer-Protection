@@ -250,6 +250,16 @@ function CC:Collect()
         self.capability.auras = false
     end
 
+    -- Last resort when the game hides the details: your heal is greyed out
+    -- (not for mana) while nothing readable explains it.
+    if live then
+        local explained = false
+        for _, e in pairs(found) do if D.TYPES[e.type].blocks then explained = true end end
+        if not explained and self:HealBlocked() then
+            found["nocast"] = { key = "nocast", type = "NOCAST", name = "Spells blocked", via = "usable" }
+        end
+    end
+
     for key, e in pairs(self.external) do
         if e.expires and e.expires <= t then self.external[key] = nil
         elseif not found[key] then found[key] = VMH.DeepCopy(e) end
@@ -404,7 +414,91 @@ end
 ------------------------------------------------------------------------
 -- Lifecycle
 ------------------------------------------------------------------------
+------------------------------------------------------------------------
+-- Heal usability: the one signal Forever keeps readable during combat.
+------------------------------------------------------------------------
+CC.healSpell = nil
+CC.healDirty = true
+
+function CC:PickHealSpell()
+    self.healDirty = false
+    local best, bestCost
+    for _, s in ipairs(VMH.Mana.costs or {}) do
+        if D.IsHealName(D.SpellName(s.id)) and (not bestCost or s.cost < bestCost) then
+            best, bestCost = s.id, s.cost
+        end
+    end
+    if best then
+        self.healSpell = best
+        VMH:Debug("cast check uses " .. tostring(D.SpellName(best)) .. " (" .. best .. ")")
+    end
+end
+
+local function usable(id)
+    local fn = (C_Spell and C_Spell.IsSpellUsable) or _G.IsUsableSpell
+    if type(fn) ~= "function" then return nil end
+    local ok, u, noMana = pcall(fn, id)
+    if not ok then return nil end
+    u, noMana = R(u), R(noMana)
+    if u == nil then return nil end
+    return u and true or false, noMana and true or false
+end
+
+function CC:HealBlocked()
+    if self.healDirty or not self.healSpell then self:PickHealSpell() end
+    local id = self.healSpell
+    if not id then return false end
+    if VMH.Safe(_G.UnitAffectingCombat, "player") ~= true then return false end
+    if VMH.Safe(_G.UnitIsDeadOrGhost, "player") == true then return false end
+    if VMH.Safe(_G.IsMounted) == true or VMH.Safe(_G.UnitOnTaxi, "player") == true then return false end
+    local form = VMH.Number(VMH.Safe(_G.GetShapeshiftForm))
+    if form and form > 0 then return false end
+    if VMH.HasPlayerBuff(15473) then return false end
+    local u, noMana = usable(id)
+    if u == nil then return false end
+    return u == false and noMana == false
+end
+
+-- Written to the debug trail whenever the game reports crowd control, so one
+-- /vmh debug log shows exactly what Forever let the addon read.
+function CC:Snapshot(event)
+    local t = VMH.Now()
+    if self.lastSnap and t - self.lastSnap < 2 then return end
+    self.lastSnap = t
+    local L = C_LossOfControl
+    local cnt = L and L.GetActiveLossOfControlDataCount and select(2, pcall(L.GetActiveLossOfControlDataCount))
+    local cntText = (cnt == nil and "none") or (R(cnt) == nil and "HIDDEN") or tostring(cnt)
+    local entry = "n/a"
+    if L and L.GetActiveLossOfControlData then
+        local ok, d = pcall(L.GetActiveLossOfControlData, 1)
+        if ok and type(d) == "table" and R(d) ~= nil then
+            entry = "type " .. (R(d.locType) and tostring(d.locType) or "HIDDEN") ..
+                ", spell " .. (R(d.spellID) and tostring(d.spellID) or "HIDDEN") ..
+                ", time " .. (R(d.timeRemaining) and string.format("%.1f", d.timeRemaining) or "HIDDEN")
+        elseif ok and d ~= nil then entry = "HIDDEN" else entry = "none" end
+    end
+    local readable, hidden = 0, 0
+    if not VMH.AurasHidden() then
+        for i = 1, 40 do
+            local a = VMH.GetAura("player", i, "HARMFUL")
+            if not a then break end
+            if a.spellId or a.name then readable = readable + 1 else hidden = hidden + 1 end
+        end
+    end
+    local u, noMana
+    if self.healSpell then u, noMana = usable(self.healSpell) end
+    VMH:Debug(string.format("probe %s: LoC count %s, entry1 %s, auras %s (%d readable, %d hidden), heal usable %s noMana %s",
+        tostring(event), cntText, entry, VMH.AurasHidden() and "HIDDEN" or "ok", readable, hidden, tostring(u), tostring(noMana)))
+end
+
 function CC:Init()
+    VMH:On("SPELLS_CHANGED", function() CC.healDirty = true end)
+    VMH:On("SPELL_UPDATE_USABLE", function()
+        if VMH.Safe(_G.UnitAffectingCombat, "player") == true or next(CC.active) then VMH:QueueAuraScan() end
+    end)
+    for _, ev in ipairs({ "LOSS_OF_CONTROL_ADDED", "PLAYER_CONTROL_LOST" }) do
+        VMH:On(ev, function() if VMH:IsActiveHere() then CC:Snapshot(ev) end end)
+    end
     VMH:OnPlayerAura(function() CC:Scan() end)
     VMH:OnUnit("UNIT_AURA", "player", function() VMH:QueueAuraScan() end)
     for _, ev in ipairs({ "LOSS_OF_CONTROL_ADDED", "LOSS_OF_CONTROL_UPDATE", "PLAYER_CONTROL_LOST", "PLAYER_CONTROL_GAINED" }) do
