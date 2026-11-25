@@ -252,6 +252,7 @@ C_Spell = {
         return { startTime = c[1], duration = c[2], isEnabled = true }
     end,
     GetSpellPowerCost = function(id) local c = S.costs[id]; if c then return { { type = 0, cost = c } } end return {} end,
+    IsSpellHelpful = function(id) return id == 2061 or id == 2050 or id == 2060 end,
     IsSpellUsable = function(id)
         local u = S.usable[id]
         if u == nil then return true, false end

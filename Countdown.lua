@@ -20,7 +20,10 @@ end
 function CD:Plan(plan)
     local c = VMH.db.countdown
     local out = {}
-    if not c.enabled or type(plan) ~= "number" or plan < (c.minDuration or 0) then return out end
+    if not c.enabled or type(plan) ~= "number" then return out end
+    -- the first scan sees a 10s effect at ~9.9s left; round so it still gets the 10s+ plan
+    plan = math.floor(plan + 0.5)
+    if plan < (c.minDuration or 0) then return out end
     for _, t in ipairs(THRESHOLDS) do
         if c["warn" .. t] then
             local ok
@@ -145,7 +148,11 @@ ticker:SetScript("OnUpdate", function(_, elapsed)
     acc = acc + (elapsed or 0)
     if acc < 0.1 then return end
     acc = 0
-    CD:Tick()
+    local ok, err = pcall(CD.Tick, CD)
+    if not ok then
+        VMH:Debug("countdown tick error: " .. tostring(err))
+        ticker:Hide() -- never repeat an error every frame
+    end
 end)
 CD.tickerFrame = ticker
 

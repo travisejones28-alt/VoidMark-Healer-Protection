@@ -13,19 +13,19 @@ VMH.ALERTS = {
     { key = "lowHealth",      tab = "mana", label = "Low health",          prio = 2, text = "Healer low health ({pct}%)", threshold = { 50, 20, 80, "Low health at %" } },
     { key = "criticalHealth", tab = "mana", label = "Critical health",     prio = 4, text = "Healer critical ({pct}%)! Help!", threshold = { 25, 5, 50, "Critical at %" } },
     { key = "death",          tab = "mana", label = "Healer death",        prio = 4, text = "Healer is dead!" },
-    { key = "selfRes",        tab = "mana", label = "Resurrection available", prio = 3, text = "Healer dead - can self-resurrect ({spell})" },
+    { key = "selfRes",        tab = "mana", label = "Self-res available", prio = 3, text = "Healer dead - can self-resurrect ({spell})" },
     { key = "revived",        tab = "mana", label = "Healer alive again",  prio = 2, text = "Healer is back up!" },
     { key = "drinking",       tab = "mana", label = "Drinking",            prio = 1, text = "Drinking ({pct}% mana)" },
     { key = "drinkDone",      tab = "mana", label = "Finished drinking",   prio = 1, text = "Done drinking ({pct}% mana)" },
     -- Aggro & Threat
     { key = "aggro",          tab = "aggro", label = "Enemy aggro",        prio = 3, text = "Healer has aggro! ({name})", context = "pve" },
     { key = "threat",         tab = "aggro", label = "Excessive threat",   prio = 2, text = "Healer threat high ({pct}%)", threshold = { 90, 60, 100, "Threat at %" }, context = "pve" },
-    { key = "multiEnemy",     tab = "aggro", label = "Multiple enemies on healer", prio = 3, text = "{count} enemies on the healer!", threshold = { 2, 2, 6, "Enemies" } },
-    { key = "los",            tab = "aggro", label = "Line of sight failure", prio = 1, text = "Can't heal - out of line of sight ({name})" },
-    { key = "range",          tab = "aggro", label = "Out of range failure",  prio = 1, text = "Can't heal - out of range ({name})" },
+    { key = "multiEnemy",     tab = "aggro", label = "Enemies on you", prio = 3, text = "{count} enemies on the healer!", threshold = { 2, 2, 6, "Enemies" } },
+    { key = "los",            tab = "aggro", label = "Line of sight", prio = 1, text = "Can't heal - out of line of sight ({name})" },
+    { key = "range",          tab = "aggro", label = "Out of range",  prio = 1, text = "Can't heal - out of range ({name})" },
     -- Crowd control
     { key = "silence",        tab = "cc", label = "Silence",               prio = 5, text = "Healer silenced! ({dur})" },
-    { key = "interrupt",      tab = "cc", label = "Interrupt / school lockout", prio = 5, text = "Healer interrupted! {school} school locked out ({dur})" },
+    { key = "interrupt",      tab = "cc", label = "Interrupt / lockout", prio = 5, text = "Healer interrupted! {school} school locked out ({dur})" },
     { key = "stun",           tab = "cc", label = "Stun",                  prio = 5, text = "Healer stunned! ({dur})" },
     { key = "fear",           tab = "cc", label = "Fear",                  prio = 5, text = "Healer feared! ({dur})" },
     { key = "horror",         tab = "cc", label = "Horror",                prio = 5, text = "Healer horrified! ({dur})" },
@@ -37,10 +37,10 @@ VMH.ALERTS = {
     { key = "mindControl",    tab = "cc", label = "Mind Control",          prio = 5, text = "Healer mind controlled! ({dur})" },
     { key = "incapacitate",   tab = "cc", label = "Incapacitate",          prio = 5, text = "Healer incapacitated! ({spell}, {dur})" },
     { key = "cyclone",        tab = "cc", label = "Cyclone",               prio = 5, text = "Healer cycloned! ({dur})" },
-    { key = "root",           tab = "cc", label = "Root (movement only)",  prio = 2, text = "Healer rooted! ({dur})" },
-    { key = "otherCC",        tab = "cc", label = "Other healing blocked", prio = 5, text = "Healer can't act: {spell} ({dur})" },
+    { key = "root",           tab = "cc", label = "Root (movement)",  prio = 2, text = "Healer rooted! ({dur})" },
+    { key = "otherCC",        tab = "cc", label = "Other CC", prio = 5, text = "Healer can't act: {spell} ({dur})" },
     { key = "countdown",      tab = "cc", label = "Countdown warnings",    prio = 4, text = "Healing resumes in {dur}!" },
-    { key = "recovered",      tab = "cc", label = "Recovery (healing resumed)", prio = 5, text = "Healer free - healing resumed! {note}" },
+    { key = "recovered",      tab = "cc", label = "Healing resumed", prio = 5, text = "Healer free - healing resumed! {note}" },
 }
 VMH.ALERT_BY_KEY = {}
 for _, a in ipairs(VMH.ALERTS) do VMH.ALERT_BY_KEY[a.key] = a end

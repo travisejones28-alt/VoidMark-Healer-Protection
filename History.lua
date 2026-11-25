@@ -15,7 +15,8 @@ function H:Init()
     for k, v in pairs(blank()) do if sv.lifetime[k] == nil then sv.lifetime[k] = v end end
 end
 
-function H:Enabled() return VMH.db and VMH.db.history.enabled end
+-- Only counts while you're healing (not as Shadow, not on a non-healing role).
+function H:Enabled() return VMH.db and VMH.db.history.enabled and VMH:IsHealerActive() end
 
 local function bump(field, amount, key)
     if not H:Enabled() then return end

@@ -87,34 +87,81 @@ function I:OnPlayerInterrupted(spellID)
             school = school, expires = expires, duration = duration, source = I:RecentInterrupter(), via = "cooldown" })
         VMH:Debug("lockout proven by cooldown probe: " .. string.format("%.1fs", expires - VMH.Now()))
     end
-    if C_Timer and C_Timer.After then C_Timer.After(0.15, check) else check() end
+    VMH.After(0.15, check)
 end
 
 ------------------------------------------------------------------------
 -- Line of sight / range
+-- The error message alone doesn't say which spell failed, so a damage spell
+-- (Mind Blast out of sight) must not count as "can't heal". The failed spell
+-- is taken from UNIT_SPELLCAST_FAILED / _SENT when the game reports it; with
+-- no spell to check, the alert needs a friendly mouseover or friendly target
+-- and no hostile target.
 ------------------------------------------------------------------------
-local function healTargetName()
-    for _, unit in ipairs({ "mouseover", "target" }) do
-        if VMH.Safe(_G.UnitExists, unit) == true and VMH.Safe(_G.UnitIsFriend, "player", unit) == true then
-            return VMH.UnitFullName(unit)
-        end
+I.lastSpell = nil
+
+local function isHelpful(spellID)
+    if not spellID then return nil end
+    if C_Spell and type(C_Spell.IsSpellHelpful) == "function" then
+        local v = VMH.Safe(C_Spell.IsSpellHelpful, spellID)
+        if v ~= nil then return v == true end
+    end
+    if C_Spell and type(C_Spell.IsSpellHarmful) == "function" then
+        local v = VMH.Safe(C_Spell.IsSpellHarmful, spellID)
+        if v ~= nil then return v ~= true end
+    end
+    local name = D.SpellName(spellID)
+    if name and type(_G.IsHelpfulSpell) == "function" then
+        local v = VMH.Safe(_G.IsHelpfulSpell, name)
+        if v ~= nil then return v == true or v == 1 end
     end
     return nil
+end
+I.IsHelpful = isHelpful
+
+local function friendly(unit)
+    return VMH.Safe(_G.UnitExists, unit) == true and VMH.Safe(_G.UnitIsFriend, "player", unit) == true
+end
+
+local function healTargetName()
+    if friendly("mouseover") then return VMH.UnitFullName("mouseover"), true end
+    if friendly("target") then return VMH.UnitFullName("target"), true end
+    return nil, false
+end
+
+function I:NoteSpell(spellID)
+    spellID = VMH.Number(spellID)
+    if spellID then self.lastSpell = { id = spellID, time = VMH.Now() } end
 end
 
 function I:OnUIError(a, b)
     local message = type(a) == "string" and a or b
     message = VMH.Readable(message)
     if type(message) ~= "string" then return end
-    if message == _G.SPELL_FAILED_LINE_OF_SIGHT then
-        VMH.Announce:Alert("los", { name = healTargetName() })
-    elseif message == _G.SPELL_FAILED_OUT_OF_RANGE or message == _G.ERR_SPELL_OUT_OF_RANGE or message == _G.ERR_OUT_OF_RANGE then
-        VMH.Announce:Alert("range", { name = healTargetName() })
-    end
+    local key
+    if message == _G.SPELL_FAILED_LINE_OF_SIGHT then key = "los"
+    elseif message == _G.SPELL_FAILED_OUT_OF_RANGE or message == _G.ERR_SPELL_OUT_OF_RANGE or message == _G.ERR_OUT_OF_RANGE then key = "range" end
+    if not key then return end
+    local at = VMH.Now()
+    -- the failed-cast event can arrive just after the error text
+    VMH.After(0.1, function()
+        local name, hasFriend = healTargetName()
+        local r = I.lastSpell
+        local helpful = nil
+        if r and math.abs(at - r.time) <= 0.5 then helpful = isHelpful(r.id) end
+        if helpful == false then return end
+        if helpful == nil then
+            if not hasFriend then return end
+            if not friendly("mouseover") and VMH.Safe(_G.UnitCanAttack, "player", "target") == true then return end
+        end
+        VMH.Announce:Alert(key, { name = name })
+    end)
 end
 
 function I:Init()
     VMH:On("UNIT_SPELLCAST_SUCCEEDED", onEnemyCast)
     VMH:OnUnit("UNIT_SPELLCAST_INTERRUPTED", "player", function(_, _, _, spellID) I:OnPlayerInterrupted(spellID) end)
     VMH:On("UI_ERROR_MESSAGE", function(_, a, b) I:OnUIError(a, b) end)
+    VMH:OnUnit("UNIT_SPELLCAST_FAILED", "player", function(_, _, _, spellID) I:NoteSpell(spellID) end)
+    VMH:OnUnit("UNIT_SPELLCAST_SENT", "player", function(_, _, _, _, spellID) I:NoteSpell(spellID) end)
 end

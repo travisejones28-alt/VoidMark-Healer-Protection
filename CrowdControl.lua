@@ -94,6 +94,7 @@ function CC:Collect()
     local t = now()
     local found = {}
     local bySpell = {}
+    local unnamed = {}   -- Loss of Control entries whose spell ID was hidden
 
     local n = locCount()
     self.capability.loc = n ~= nil
@@ -112,7 +113,8 @@ function CC:Collect()
                 local e = { key = key, spellID = d.spellID, type = kind, icon = d.icon, duration = d.duration,
                     expires = expires, school = d.school, text = d.text, via = "loc" }
                 found[key] = e
-                if d.spellID and kind ~= "LOCKOUT" then bySpell[d.spellID] = e end
+                if d.spellID and kind ~= "LOCKOUT" then bySpell[d.spellID] = e
+                elseif kind ~= "LOCKOUT" then unnamed[#unnamed + 1] = e end
             end
         end
     end
@@ -127,6 +129,29 @@ function CC:Collect()
                 local source = a.sourceUnit and VMH.UnitFullName(a.sourceUnit) or nil
                 local expires = (type(a.expirationTime) == "number" and a.expirationTime > 0) and a.expirationTime or nil
                 local existing = a.spellId and bySpell[a.spellId]
+                if not existing then
+                    -- Same effect seen through Loss of Control without its spell ID:
+                    -- match by end time (or by type when times are hidden).
+                    for i, e in ipairs(unnamed) do
+                        local sameEnd = expires and e.expires and math.abs(e.expires - expires) < 0.6
+                        local sameType = e.type == kind or (not expires or not e.expires)
+                        if sameEnd or (sameType and D.TYPES[kind].blocks == D.TYPES[e.type].blocks) then
+                            existing = e
+                            table.remove(unnamed, i)
+                            -- the debuff knows the exact spell, so its category is more specific
+                            e.type = kind
+                            e.spellID = a.spellId
+                            break
+                        end
+                    end
+                end
+                if existing and existing.key ~= ("s:" .. tostring(a.spellId)) and a.spellId and existing.via == "loc"
+                    and existing.key:sub(1, 2) == "t:" then
+                    -- keep one stable key whichever source saw it first
+                    found[existing.key] = nil
+                    existing.key = "s:" .. a.spellId
+                    found[existing.key] = existing
+                end
                 if existing then
                     existing.source = existing.source or source
                     existing.expires = existing.expires or expires
@@ -194,7 +219,35 @@ function CC:Remaining(e)
     return nil
 end
 
+-- Signature of one real effect: type + end time. If the game flips a value
+-- between readable and hidden, the effect can reappear under another key;
+-- this stops it being announced or counted twice.
+CC.seen = {}
+
+function CC:AlreadySeen(e)
+    if not e.expires or e.simulated then return false end
+    local t = now()
+    for i = #self.seen, 1, -1 do
+        local x = self.seen[i]
+        if t - x.at > 30 then
+            table.remove(self.seen, i)
+        elseif math.abs(x.expires - e.expires) < 1 and t - x.at < 4 then
+            -- two different known spells are two effects; otherwise it's the same one seen twice
+            local differentSpells = x.spellID and e.spellID and x.spellID ~= e.spellID
+            local sameKind = x.type == e.type
+                or (x.blocks and e.blocks and (not x.spellID or not e.spellID) and x.type ~= "LOCKOUT" and e.type ~= "LOCKOUT")
+            if sameKind and not differentSpells then return true end
+        end
+    end
+    self.seen[#self.seen + 1] = { type = e.type, blocks = e.blocks, spellID = e.spellID, expires = e.expires, at = t }
+    return false
+end
+
 function CC:OnAdded(e)
+    if self:AlreadySeen(e) then
+        VMH:Debug("same effect seen again, not re-announced: " .. e.type)
+        return
+    end
     if e.type == "LOCKOUT" and not e.source and VMH.Interrupts then
         e.source = VMH.Interrupts:RecentInterrupter()
     end

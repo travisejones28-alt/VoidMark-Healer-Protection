@@ -6,7 +6,7 @@
 local ADDON, VMH = ...
 VoidMarkHealer = VMH
 VMH.name = ADDON
-VMH.version = "1.0.0"
+VMH.version = "1.0.1"
 VMH.modules = {}
 VMH.debugLog = {}
 VMH.session = { started = nil }
@@ -47,6 +47,15 @@ end
 
 function VMH.Now()
     return GetTime and GetTime() or 0
+end
+
+-- Timers: every callback is protected so a bad value can never raise a Lua error popup.
+function VMH.After(sec, fn)
+    local function run()
+        local ok, err = pcall(fn)
+        if not ok then VMH:Debug("timer error: " .. tostring(err)) end
+    end
+    if C_Timer and C_Timer.After then C_Timer.After(math.max(0, sec or 0), run) else run() end
 end
 
 -- Forever characters carry a first name and a surname. Identity always uses both.
@@ -158,11 +167,7 @@ end
 function VMH:QueueAuraScan()
     if auraPending then return end
     auraPending = true
-    if C_Timer and C_Timer.After then
-        C_Timer.After(0, function() VMH:RunAuraScan() end)
-    else
-        VMH:RunAuraScan()
-    end
+    VMH.After(0, function() VMH:RunAuraScan() end)
 end
 
 function VMH.AurasHidden()

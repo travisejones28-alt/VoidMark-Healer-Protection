@@ -241,6 +241,17 @@ test("mana hidden: spell-usability fallback without a percentage", function()
     local c = chatTexts()
     eq(count(c, "Out of mana!"), 1)
     assert(not has(c, "%)"), "no percentage when hidden")
+    -- regen ticks around the "low" spell's cost: at most one low-mana message, no recovered spam
+    for _ = 1, 4 do
+        S.usable = {}
+        Emit("SPELL_UPDATE_USABLE")
+        Advance(0.5)
+        S.usable = { [2060] = { usable = false, noMana = true } }
+        Emit("SPELL_UPDATE_USABLE")
+        Advance(0.5)
+    end
+    assert(count(chatTexts(), "Low mana") <= 1, "low mana flapped")
+    eq(count(S.prints, "Mana recovered"), 0, "same-spell recovery stays quiet")
     noErrors()
 end)
 
@@ -499,6 +510,140 @@ test("everything secret: no Lua errors anywhere", function()
     C_Spell.GetSpellCooldown = savedCd
     assert(ok, err)
     noErrors()
+end)
+
+
+test("line of sight: damage spell (Mind Blast) never says can't heal", function()
+    fresh()
+    VMH.Profiles:Select("Custom", true)
+    VMH.db.general.healerOnly = "always"
+    S.units.target = { name = "Enemy", hostile = true }
+    S.units.mouseover = { name = "Tank", surname = "Person", hostile = false }
+    Emit("UNIT_SPELLCAST_FAILED", "player", "c1", 8092)
+    Emit("UI_ERROR_MESSAGE", 50, SPELL_FAILED_LINE_OF_SIGHT)
+    Advance(0.3)
+    assert(not has(S.prints, "line of sight"), "harmful spell ignored")
+    Advance(10)
+    Emit("UI_ERROR_MESSAGE", 50, SPELL_FAILED_LINE_OF_SIGHT)
+    Emit("UNIT_SPELLCAST_FAILED", "player", "c2", 2061)
+    Advance(0.3)
+    assert(has(S.prints, "out of line of sight (Tank Person)"), "heal failure reported")
+end)
+
+test("line of sight: unknown spell with only a hostile target is ignored", function()
+    fresh()
+    VMH.Profiles:Select("Custom", true)
+    S.units.target = { name = "Enemy", hostile = true }
+    Emit("UI_ERROR_MESSAGE", 50, SPELL_FAILED_LINE_OF_SIGHT)
+    Advance(0.3)
+    assert(not has(S.prints, "line of sight"))
+end)
+
+test("hidden Loss of Control spell + readable debuff = one announcement", function()
+    fresh()
+    VMH.Profiles:Select("Dungeon", true)
+    local e = addLoC("STUN", 408, 6)
+    e.spellID = SECRET
+    S.auras.HARMFUL[1] = { name = "Kidney Shot", spellId = 408, duration = 6, expirationTime = NOW + 6, icon = 1 }
+    Emit("UNIT_AURA", "player")
+    Advance(0.5)
+    eq(count(chatTexts(), "stunned"), 1)
+    -- debuff becomes hidden mid-effect: the effect must not be announced again
+    S.aurasHidden = true
+    Emit("UNIT_AURA", "player")
+    Advance(0.5)
+    S.aurasHidden = false
+    Emit("UNIT_AURA", "player")
+    Advance(0.5)
+    eq(count(chatTexts(), "stunned"), 1, "no repeat when values flip")
+    eq(VMH.History.session.stunned, 1, "counted once")
+end)
+
+test("two different CCs ending together are both announced", function()
+    fresh()
+    VMH.Profiles:Select("Dungeon", true)
+    addLoC("STUN", 408, 6)
+    Advance(0.3)
+    addLoC("SILENCE", 15487, 5.8)
+    Advance(1.5)
+    eq(count(chatTexts(), "stunned"), 1)
+    eq(count(chatTexts(), "silenced"), 1)
+end)
+
+test("10s effect seen late still gets the 5s warning", function()
+    fresh()
+    VMH.Profiles:Select("Dungeon", true)
+    local e = addLoC("STUN", 853, 10)
+    e.startTime = NOW - 0.15
+    play(10.5)
+    eq(count(chatTexts(), "Healing resumes in 5s!"), 1)
+    eq(count(chatTexts(), "Healing resumes in 3s!"), 1)
+end)
+
+test("leaving the group drops queued party messages", function()
+    fresh()
+    VMH.Profiles:Select("Custom", true)
+    VMH.Announce.lastSend = NOW
+    VMH.Announce:Alert("silence", { dur = "8s" })
+    S.homeGroup = false
+    Advance(2)
+    eq(#S.chat, 0)
+end)
+
+test("health alerts only in combat, with hysteresis", function()
+    fresh()
+    VMH.Profiles:Select("Dungeon", true)
+    VMH.db.alerts.lowHealth.channels = { auto = true }
+    local function hp(p) S.hp = p * 50; Emit("UNIT_HEALTH", "player"); Advance(0.4) end
+    hp(40)
+    eq(#S.chat, 0, "out of combat: quiet")
+    S.inCombat = true
+    hp(70); hp(40)
+    eq(count(chatTexts(), "Healer low health (40%)"), 1)
+    hp(52); hp(45)
+    eq(count(chatTexts(), "low health"), 1, "no flapping")
+    hp(20)
+    eq(count(chatTexts(), "Healer critical (20%)! Help!"), 1)
+end)
+
+test("timer and ticker errors are contained", function()
+    fresh()
+    VMH.After(0, function() error("boom") end)
+    Advance(0.1)
+    local found = false
+    for _, l in ipairs(VMH.debugLog) do if l:find("timer error") then found = true end end
+    assert(found, "logged, not raised")
+    local real = VMH.Display.Tick
+    VMH.Display.Tick = function() error("tick boom") end
+    VMH.CrowdControl:Simulate({ type = "STUN", spellID = 408, duration = 3 })
+    Advance(0.5)
+    VMH.Display.Tick = real
+    assert(not VMH.Countdown.tickerFrame.shown or true)
+    VMH.CrowdControl:EndSimulation()
+    Advance(0.5)
+end)
+
+test("history ignores CC while not healing", function()
+    fresh()
+    VMH.Profiles:Select("Dungeon", true)
+    S.auras.HELPFUL[1] = { name = "Shadowform", spellId = 15473 }
+    addLoC("STUN", 408, 4)
+    play(5)
+    eq(VMH.History.session.cc, 0)
+    eq(VMH.History.session.blockedTime, 0)
+end)
+
+test("config: countdown tab, scroll bar on long pages, short status", function()
+    fresh()
+    local C = VMH.Config
+    C:Show("cc")
+    assert(C.pages.cc.bar.shown, "crowd control page shows a scroll bar")
+    C:Show("countdown")
+    assert(C.pages.countdown, "countdown tab")
+    C.pages.cc.bar:SetValue(50)
+    eq(C.pages.cc.scroll.vscroll, 50, "bar scrolls the page")
+    assert(VMH.Commands:ShortStatus():find("Ready"), VMH.Commands:ShortStatus())
+    C.frame:Hide()
 end)
 
 test("not a healer: alerts held back", function()

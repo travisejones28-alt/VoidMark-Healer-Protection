@@ -90,7 +90,10 @@ Forever has no combat log, and can hide values from addons in combat. VoidMark H
   (costs learned out of combat) and the message leaves the percentage out.
 - **Health alerts** pause while health is hidden. Death and resurrection alerts always work.
 - **Say / Yell** only work inside instances (game rule). **Group chat lockdown**: messages show locally instead.
-- **Line of sight / range** names your mouseover or friendly target, so with click-casting the name is the frame you clicked.
+- **Line of sight / range** only count failed *helpful* spells (a Mind Blast out of sight is ignored). The name is your
+  mouseover or friendly target, so with click-casting it's the frame you clicked.
+- **Low/critical health** alerts only fire in combat.
+- **Statistics** only count while you're healing.
 - **Shadow Priests**: Shadowform counts as "not healing" (set "Announce when: Always" to override).
 
 ## Development
@@ -102,3 +105,12 @@ python tools/package.py               # build + verify dist/VoidMarkHealer.zip
 ```
 
 Tests run against a mocked client (including secret values). They do not replace an in-game check.
+
+## Changes
+
+**1.0.1** - Countdown has its own tab; visible scroll bar on long pages; shorter alert names; plain one-line status on
+General (full status via button or `/vmh status`); "Where" renamed "Use in"; Reset lifetime confirm times out; sliders
+ignore the mouse wheel so scrolling can't change settings. Fixes: line-of-sight/range no longer fire for damage spells;
+one effect is never announced twice when the game hides/unhides values; 10s effects always get the 5s warning;
+queued messages are dropped if you leave the group; health alerts only in combat; no aggro alerts while dead;
+hidden-mana recovery no longer bounces; every timer and the update loop are error-protected.

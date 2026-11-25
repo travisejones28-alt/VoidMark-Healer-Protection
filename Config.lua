@@ -11,6 +11,7 @@ local TABS = {
     { key = "general", label = "General" },
     { key = "mana", label = "Mana & Health" },
     { key = "cc", label = "Crowd Control" },
+    { key = "countdown", label = "Countdown" },
     { key = "aggro", label = "Aggro & Threat" },
     { key = "announce", label = "Announcements" },
     { key = "visuals", label = "Visuals & Sounds" },
@@ -117,6 +118,7 @@ end
 
 local function check(page, x, label, get, set, tip, keep)
     local w = W.Check(page.frame, label, get, set, tip)
+    w:SetWidth(560 - (x or 12))
     page:Place(w, x, 24, keep)
     return w
 end
@@ -141,7 +143,7 @@ function Cfg:AlertSection(page, tab)
     for _, a in ipairs(alerts) do
         local key = a.key
         local cb = W.Check(page.frame, a.label, function() return db().alerts[key].enabled end,
-            function(v) db().alerts[key].enabled = v end)
+            function(v) db().alerts[key].enabled = v end, a.label .. "\nTurn this alert on or off.")
         cb:SetWidth(200)
         page:Place(cb, 12, 0, true)
         local test = W.Button(page.frame, "Test", 40, 20, function()
@@ -162,10 +164,10 @@ end
 function Cfg:AlertEditor(page, startY, firstKey)
     local ed = CreateFrame("Frame", nil, page.frame)
     ed:SetPoint("TOPLEFT", page.frame, "TOPLEFT", 296, -startY + 4)
-    ed:SetSize(320, 470)
+    ed:SetSize(320, 448)
     W.Fill(ed, { 0.08, 0.055, 0.13, 1 })
     W.Border(ed, C.border)
-    ed.height = 476
+    ed.height = 454
     ed.key = firstKey -- widgets read their value as soon as they are created
     local function cfg() return db().alerts[ed.key] end
     local y = 8
@@ -181,12 +183,12 @@ function Cfg:AlertEditor(page, startY, firstKey)
     ed.title = put(W.Label(ed, "", 13, C.accent), 22)
     local text = track(W.EditBox(ed, "Announcement text", 300, function() return cfg().text end,
         function(v) if v == "" then v = VMH.ALERT_BY_KEY[ed.key].text end cfg().text = v end))
-    put(text, 44)
-    local reset = W.Button(ed, "Default text", 90, 18, function()
+    local reset = W.Button(ed, "Default text", 90, 16, function()
         cfg().text = VMH.ALERT_BY_KEY[ed.key].text
         text:Refresh()
     end)
-    put(reset, 22)
+    reset:SetPoint("TOPLEFT", ed, "TOPLEFT", 220, -y)
+    put(text, 44)
     local note = W.Label(ed, "Tokens: {pct} {dur} {spell} {school} {name} {count}. Unknown values are left out, never guessed.", 10, C.dim)
     note:SetWidth(300)
     put(note, 26)
@@ -210,8 +212,10 @@ function Cfg:AlertEditor(page, startY, firstKey)
     local play = W.Button(ed, "Play", 50, 20, function() VMH.Announce:PlaySound(cfg().sound) end)
     play:SetPoint("TOPLEFT", ed, "TOPLEFT", 216, -y - 20)
     y = y + 44
-    put(track(W.Check(ed, "On-screen warning", function() return cfg().onscreen end, function(v) cfg().onscreen = v end)), 24)
-    put(track(W.Dropdown(ed, "Where", 200, {
+    local onscreen = track(W.Check(ed, "On-screen warning", function() return cfg().onscreen end, function(v) cfg().onscreen = v end))
+    onscreen:SetWidth(280)
+    put(onscreen, 24)
+    put(track(W.Dropdown(ed, "Use in", 200, {
         { value = "any", label = "PvE and PvP" }, { value = "pve", label = "PvE only" }, { value = "pvp", label = "PvP only" },
     }, function() return cfg().context end, function(v) cfg().context = v end)), 44)
 
@@ -282,11 +286,13 @@ function Cfg:Build_general(page)
     page:Place(prev, 150, 32)
 
     page:Header("Status")
-    local status = W.Label(page.frame, "", 11)
-    status:SetWidth(580)
-    status:SetJustifyV("TOP")
-    page:Place(status, 12, 120)
-    page.onRefresh = function() status:SetText(VMH.Commands:StatusText()) end
+    local summary = W.Label(page.frame, "", 12)
+    summary:SetWidth(560)
+    page:Place(summary, 12, 22)
+    local full = W.Button(page.frame, "Full status in chat", 150, 22, function() VMH.Commands:Handle("status") end,
+        "Prints what the game is letting the addon read right now.")
+    page:Place(full, 12, 30)
+    page.onRefresh = function() summary:SetText(VMH.Commands:ShortStatus()) end
 
     page:Header("Reset")
     local armed = false
@@ -295,7 +301,7 @@ function Cfg:Build_general(page)
         if not armed then
             armed = true
             resetBtn:SetLabel("Click again to confirm")
-            if C_Timer and C_Timer.After then C_Timer.After(4, function() armed = false; resetBtn:SetLabel("Reset all settings") end) end
+            VMH.After(4, function() armed = false; resetBtn:SetLabel("Reset all settings") end)
             return
         end
         armed = false
@@ -318,27 +324,37 @@ end
 
 function Cfg:Build_cc(page)
     self:AlertSection(page, "cc")
+    page:Note("Roots are announced but never count as \"healing blocked\". Countdown timing is on the Countdown tab.", 18)
+end
+
+function Cfg:Build_countdown(page)
     local cd = function() return db().countdown end
-    page:Header("Countdown")
+    page:Header("Countdown to healing")
     check(page, 12, "Countdown warnings", function() return cd().enabled end, function(v) cd().enabled = v end)
-    check(page, 12, "Smart plan (5s warning for 10s+, 3s warning for 5s+)", function() return cd().smart end,
-        function(v) cd().smart = v end, "Off: every ticked warning that fits inside the effect is used.")
-    slider(page, 12, "Minimum duration for countdowns", 0, 15, 1, function() return cd().minDuration end,
+    check(page, 12, "Smart plan", function() return cd().smart end, function(v) cd().smart = v end,
+        "On: 5s warning only for effects of 10s or more, 3s warning for 5s or more.\nOff: every ticked warning that fits inside the effect is used.")
+    slider(page, 12, "Shortest effect that gets a countdown", 0, 15, 1, function() return cd().minDuration end,
         function(v) cd().minDuration = v end, function(v) return v .. "s" end)
+    page:Note("Warnings to use", 18)
     local x = 12
     for _, t in ipairs({ 10, 5, 3, 2, 1 }) do
-        local w = W.Check(page.frame, t .. "s warning", function() return cd()["warn" .. t] end, function(v) cd()["warn" .. t] = v end)
-        w:SetWidth(100)
+        local w = W.Check(page.frame, t .. "s", function() return cd()["warn" .. t] end, function(v) cd()["warn" .. t] = v end)
+        w:SetWidth(70)
         page:Place(w, x, 0, true)
-        x = x + 110
+        x = x + 80
     end
-    page:Gap(26)
-    check(page, 12, "Recovery announcement (healing resumed)", function() return cd().recovery end, function(v) cd().recovery = v end)
-    check(page, 12, "Recovery for effects under 5 seconds", function() return cd().recoveryShort end, function(v) cd().recoveryShort = v end)
-    check(page, 12, "Countdown in chat", function() return cd().chat end, function(v) cd().chat = v end)
-    check(page, 12, "On-screen countdown (display header)", function() return cd().onscreen end, function(v) cd().onscreen = v end)
-    check(page, 12, "Countdown sound", function() return cd().sound end, function(v) cd().sound = v end)
-    page:Note("Durations come from the game (they already include diminishing returns). If the game does not give a duration, no number is shown and the countdown waits for the effect to end.", 44)
+    page:Gap(28)
+    page:Header("Where the countdown shows")
+    check(page, 12, "In chat (uses the Countdown warnings alert's channels)", function() return cd().chat end, function(v) cd().chat = v end)
+    check(page, 12, "On screen (display header)", function() return cd().onscreen end, function(v) cd().onscreen = v end)
+    check(page, 12, "Sound at each warning", function() return cd().sound end, function(v) cd().sound = v end)
+    page:Header("Recovery")
+    check(page, 12, "Announce when healing resumes", function() return cd().recovery end, function(v) cd().recovery = v end)
+    check(page, 12, "Also for effects under 5 seconds", function() return cd().recoveryShort end, function(v) cd().recoveryShort = v end)
+    page:Note("Times come from the game and already include diminishing returns, dispels and trinkets. If the game hides a duration, no number is shown and the countdown waits for the effect to end.", 44)
+    local b = W.Button(page.frame, "Simulate a 12s fear", 150, 22, function() VMH.Commands:Simulate("countdown") end,
+        "Runs locally: chat output is printed only to you.")
+    page:Place(b, 12, 30)
 end
 
 function Cfg:Build_announce(page)
@@ -501,6 +517,7 @@ function Cfg:Build_history(page)
         if not armed then
             armed = true
             r2:SetLabel("Click again to confirm")
+            VMH.After(4, function() armed = false; r2:SetLabel("Reset lifetime") end)
             return
         end
         armed = false

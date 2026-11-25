@@ -70,6 +70,10 @@ end
 function T:Evaluate()
     self.pending = false
     if not VMH.loaded then return end
+    if VMH.Safe(_G.UnitIsDeadOrGhost, "player") == true then
+        self.aggro, self.threatHigh, self.multi = false, false, false
+        return
+    end
     local now = VMH.Now()
     local count, players, npcName = self:Count()
     self.attackers, self.playerAttackers = count, players
@@ -125,7 +129,7 @@ end
 function T:Queue(delay)
     if self.pending then return end
     self.pending = true
-    if C_Timer and C_Timer.After then C_Timer.After(delay or 0.3, function() T:Evaluate() end) else self:Evaluate() end
+    VMH.After(delay or 0.3, function() T:Evaluate() end)
 end
 
 local function watchedUnit(unit)

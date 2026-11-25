@@ -135,6 +135,13 @@ function M:Evaluate()
         isOom = lacksMana(oomSpell) == true
         isLow = lacksMana(lowSpell) == true
         local recOk = lacksMana(recSpell)
+        -- if "recovered" would test the same spell as "low", it would fire one regen
+        -- tick after the low warning: re-arm quietly instead of announcing
+        if recSpell == lowSpell or recSpell == oomSpell then
+            self.quietRecover = true
+        else
+            self.quietRecover = false
+        end
         isRecovered = recOk == false
         rearmOom = lacksMana(self:SpellAt(oomT + hyst)) == false
         rearmLow = lacksMana(self:SpellAt(lowT + hyst)) == false
@@ -153,7 +160,7 @@ function M:Evaluate()
     elseif self.needRecover and isRecovered then
         self.state = "ok"
         self.needRecover = false
-        VMH.Announce:Alert("manaRecovered", { pct = pct })
+        if pct or not self.quietRecover then VMH.Announce:Alert("manaRecovered", { pct = pct }) end
     elseif self.state == "oom" and rearmOom then
         -- climbed clear of the out-of-mana line: it may fire again later
         self.state = isLow and "low" or "ok"
@@ -165,7 +172,7 @@ end
 function M:Queue()
     if self.pending then return end
     self.pending = true
-    if C_Timer and C_Timer.After then C_Timer.After(0.25, function() M:Evaluate() end) else self:Evaluate() end
+    VMH.After(0.25, function() M:Evaluate() end)
 end
 
 ------------------------------------------------------------------------
@@ -203,11 +210,9 @@ function M:Init()
     VMH:On("SPELL_UPDATE_USABLE", function() M:Queue() end)
     VMH:On("SPELLS_CHANGED", function()
         M.costsDirty = true
-        if C_Timer and C_Timer.After then
-            if not M.scanQueued then
-                M.scanQueued = true
-                C_Timer.After(1, function() M.scanQueued = false; M:ScanCosts() end)
-            end
+        if not M.scanQueued then
+            M.scanQueued = true
+            VMH.After(1, function() M.scanQueued = false; M:ScanCosts() end)
         end
     end)
     VMH:On("PLAYER_REGEN_ENABLED", function() if M.costsDirty then M:ScanCosts() end end)

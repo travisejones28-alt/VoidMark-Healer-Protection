@@ -5,9 +5,7 @@
 local _, VMH = ...
 local Cmd = VMH:NewModule("Commands")
 
-local function after(sec, fn)
-    if C_Timer and C_Timer.After then C_Timer.After(sec, fn) else fn() end
-end
+local after = VMH.After
 
 local SIMS = {
     silence = function()
@@ -87,6 +85,19 @@ function Cmd:StatusText()
             "   Healing blocked: " .. yesno(VMH.Countdown.block ~= nil),
     }
     return table.concat(lines, "\n")
+end
+
+-- One plain line for the General tab.
+function Cmd:ShortStatus()
+    if not VMH.db.general.enabled then return "|cffff5050Turned off|r (Enable VoidMark Healer above)." end
+    if not VMH:IsHealerActive() then
+        return "|cffffd200Waiting|r - alerts start when you're healing (see \"Announce when\")."
+    end
+    local cc = VMH.CrowdControl.capability
+    if not cc.loc and VMH.AurasHidden() then
+        return "|cffffd200Limited|r - the game is hiding crowd-control data right now."
+    end
+    return "|cff40ff40Ready|r - profile " .. tostring(VMH.Profiles:Current()) .. "."
 end
 
 local HELP = {

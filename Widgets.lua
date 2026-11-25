@@ -119,6 +119,9 @@ function W.Check(parent, label, get, set, tip)
     f.mark = mark
     f.label = W.Label(f, label, 12)
     f.label:SetPoint("LEFT", box, "RIGHT", 6, 0)
+    f.label:SetPoint("RIGHT", f, "RIGHT", 0, 0)
+    if f.label.SetWordWrap then f.label:SetWordWrap(false) end
+    -- long labels are cut short instead of running into the next control
     function f:Refresh()
         local v = get()
         self.mark:SetShown(v and true or false)
@@ -163,7 +166,7 @@ function W.Slider(parent, label, minV, maxV, step, get, set, fmt)
     thumb:SetSize(10, 14)
     thumb:SetColorTexture(C.accent[1], C.accent[2], C.accent[3], 1)
     s:SetThumbTexture(thumb)
-    s:EnableMouseWheel(true)
+    -- no mouse wheel: scrolling the page over a slider must never change a setting
     f.slider = s
     local function round(v)
         v = math.floor(v / step + 0.5) * step
@@ -182,7 +185,6 @@ function W.Slider(parent, label, minV, maxV, step, get, set, fmt)
         show(v)
         if f.onChange then f.onChange(v) end
     end)
-    s:SetScript("OnMouseWheel", function(self, delta) self:SetValue(round((self:GetValue() or minV) + delta * step)) end)
     local minus = W.Button(f, "-", 18, 16, function() s:SetValue(round((s:GetValue() or minV) - step)) end)
     minus:SetPoint("RIGHT", s, "LEFT", -3, 0)
     local plus = W.Button(f, "+", 18, 16, function() s:SetValue(round((s:GetValue() or minV) + step)) end)
@@ -210,6 +212,7 @@ local function getPopup()
     popup:EnableMouse(true)
     W.Fill(popup, C.bg)
     W.Border(popup, C.accent)
+    if type(UISpecialFrames) == "table" then table.insert(UISpecialFrames, "VoidMarkHealerDropdownList") end
     popup.buttons = {}
     popup:Hide()
     return popup
@@ -317,7 +320,10 @@ end
 ------------------------------------------------------------------------
 local function openPicker(r, g, b, a, onChange)
     local P = _G.ColorPickerFrame
-    if not P then return end
+    if not P then
+        VMH:Print("The color picker isn't available here.")
+        return
+    end
     local hasAlpha = a ~= nil
     local function current()
         local nr, ng, nb = P:GetColorRGB()
@@ -328,8 +334,9 @@ local function openPicker(r, g, b, a, onChange)
         end
         return nr, ng, nb, na
     end
-    local function apply() onChange(current()) end
+    local function apply() pcall(function() onChange(current()) end) end
     local function cancel() onChange(r, g, b, a) end
+    local ok = pcall(function()
     if P.SetupColorPickerAndShow then
         P:SetupColorPickerAndShow({ r = r, g = g, b = b, opacity = a, hasOpacity = hasAlpha,
             swatchFunc = apply, opacityFunc = apply, cancelFunc = cancel })
@@ -340,6 +347,8 @@ local function openPicker(r, g, b, a, onChange)
         P:Hide()
         P:Show()
     end
+    end)
+    if not ok then VMH:Print("The color picker isn't available here. Colors can be reset with the profile reset.") end
 end
 
 function W.Color(parent, label, get, set)
@@ -371,28 +380,77 @@ function W.Color(parent, label, get, set)
 end
 
 ------------------------------------------------------------------------
--- Scrolling page with a simple flow layout
+-- Scrolling page with a visible scroll bar and a simple flow layout.
+-- The bar only shows when the page is taller than the window.
 ------------------------------------------------------------------------
+local VIEW_HEIGHT = 510
+
 function W.Page(parent)
     local scroll = CreateFrame("ScrollFrame", nil, parent)
-    scroll:SetAllPoints()
+    scroll:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
+    scroll:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -14, 0)
     local child = CreateFrame("Frame", nil, scroll)
-    child:SetSize(parent:GetWidth() > 0 and parent:GetWidth() or 560, 400)
+    local width = (parent:GetWidth() or 0) > 0 and (parent:GetWidth() - 14) or 620
+    child:SetSize(width, 400)
     scroll:SetScrollChild(child)
-    scroll:EnableMouseWheel(true)
-    scroll:SetScript("OnMouseWheel", function(self, delta)
-        local maxScroll = math.max(0, child:GetHeight() - self:GetHeight())
-        local v = (self:GetVerticalScroll() or 0) - delta * 40
-        if v < 0 then v = 0 elseif v > maxScroll then v = maxScroll end
-        self:SetVerticalScroll(v)
+
+    local bar = CreateFrame("Slider", nil, parent)
+    bar:SetOrientation("VERTICAL")
+    bar:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -2, -2)
+    bar:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -2, 2)
+    bar:SetWidth(10)
+    local track = bar:CreateTexture(nil, "BACKGROUND")
+    track:SetAllPoints()
+    track:SetColorTexture(C.panel[1], C.panel[2], C.panel[3], 1)
+    local thumb = bar:CreateTexture(nil, "OVERLAY")
+    thumb:SetSize(10, 40)
+    thumb:SetColorTexture(C.accent[1], C.accent[2], C.accent[3], 1)
+    bar:SetThumbTexture(thumb)
+    bar:SetMinMaxValues(0, 0)
+    bar:SetValueStep(1)
+    bar:SetValue(0)
+    bar:Hide()
+    bar:SetScript("OnValueChanged", function(_, v)
+        W.CloseDropdown()
+        scroll:SetVerticalScroll(v)
     end)
-    local page = { scroll = scroll, frame = child, y = 10, widgets = {} }
+
+    local page = { scroll = scroll, frame = child, bar = bar, y = 10, widgets = {} }
+
+    local function viewHeight()
+        local h = scroll:GetHeight() or 0
+        if h <= 0 then h = VIEW_HEIGHT end
+        return h
+    end
+    function page:UpdateScroll()
+        child:SetHeight(self.y + 20)
+        local range = math.max(0, math.floor(self.y + 20 - viewHeight()))
+        bar:SetMinMaxValues(0, range)
+        if range > 0 then
+            bar:Show()
+            local v = bar:GetValue() or 0
+            if v > range then bar:SetValue(range) end
+        else
+            bar:SetValue(0)
+            bar:Hide()
+            scroll:SetVerticalScroll(0)
+        end
+    end
+    scroll:EnableMouseWheel(true)
+    scroll:SetScript("OnMouseWheel", function(_, delta)
+        if not bar:IsShown() then return end
+        local minV, maxV = bar:GetMinMaxValues()
+        local v = (bar:GetValue() or 0) - delta * 40
+        if v < minV then v = minV elseif v > maxV then v = maxV end
+        bar:SetValue(v)
+    end)
+    scroll:SetScript("OnSizeChanged", function() page:UpdateScroll() end)
+
     function page:Place(widget, x, height, keepLine, dy)
         widget:ClearAllPoints()
         widget:SetPoint("TOPLEFT", child, "TOPLEFT", x or 12, -(self.y + (dy or 0)))
         if not keepLine then self.y = self.y + (height or 26) end
         if widget.Refresh then self.widgets[#self.widgets + 1] = widget end
-        child:SetHeight(self.y + 20)
         return widget
     end
     function page:Header(text)
@@ -409,7 +467,7 @@ function W.Page(parent)
     end
     function page:Note(text, height)
         local fs = W.Label(child, text, 11, C.dim)
-        fs:SetWidth(530)
+        fs:SetWidth(width - 30)
         fs:SetPoint("TOPLEFT", child, "TOPLEFT", 12, -self.y)
         self.y = self.y + (height or 18)
         return fs
@@ -419,6 +477,7 @@ function W.Page(parent)
     function page:Refresh()
         for _, w in ipairs(self.widgets) do if w.Refresh then w:Refresh() end end
         if self.onRefresh then self.onRefresh() end
+        self:UpdateScroll()
     end
     return page
 end

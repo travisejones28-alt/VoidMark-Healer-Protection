@@ -26,6 +26,12 @@ function Hm:Evaluate()
     local pct = self:Percent()
     if not pct then return end
     local a = VMH.db.alerts
+    -- Out of combat, low health is just regen time: only re-arm, never announce.
+    if VMH.Safe(_G.UnitAffectingCombat, "player") ~= true then
+        local hyst = VMH.db.announce.hysteresis or 10
+        if self.state ~= "ok" and pct > a.lowHealth.threshold + hyst then self.state = "ok" end
+        return
+    end
     local hyst = VMH.db.announce.hysteresis or 10
     local lowT, critT = a.lowHealth.threshold, a.criticalHealth.threshold
     if pct <= critT and self.state ~= "critical" then
@@ -44,7 +50,7 @@ end
 function Hm:Queue()
     if self.pending then return end
     self.pending = true
-    if C_Timer and C_Timer.After then C_Timer.After(0.2, function() Hm:Evaluate() end) else self:Evaluate() end
+    VMH.After(0.2, function() Hm:Evaluate() end)
 end
 
 local function selfResOption()
@@ -64,11 +70,7 @@ function Hm:OnDeath()
     local res = selfResOption()
     if res then
         -- give the death message the first slot in the queue
-        if C_Timer and C_Timer.After then
-            C_Timer.After(1.5, function() if Hm.dead then VMH.Announce:Alert("selfRes", { spell = res }) end end)
-        else
-            VMH.Announce:Alert("selfRes", { spell = res })
-        end
+        VMH.After(1.5, function() if Hm.dead then VMH.Announce:Alert("selfRes", { spell = res }) end end)
     end
 end
 

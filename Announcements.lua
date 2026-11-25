@@ -114,6 +114,18 @@ local function chatLocked()
 end
 A.ChatLocked = chatLocked
 
+-- Re-checked at send time: the group may have changed while a message waited.
+function A:StillValid(chatType)
+    if chatType == "PARTY" then return inGroup() end
+    if chatType == "RAID" then return VMH.Safe(_G.IsInRaid) == true end
+    if chatType == "INSTANCE_CHAT" then
+        local cat = _G.LE_PARTY_CATEGORY_INSTANCE
+        return cat ~= nil and inGroup(cat)
+    end
+    if chatType == "SAY" or chatType == "YELL" then return VMH.Safe(_G.IsInInstance) == true end
+    return false
+end
+
 local function send(msg, chatType)
     local fn = (C_ChatInfo and C_ChatInfo.SendChatMessage) or _G.SendChatMessage
     if type(fn) ~= "function" then return false end
@@ -151,7 +163,10 @@ function A:Flush()
     if chatLocked() then
         VMH:Print(entry.text .. " |cff888888(group chat is locked by the game right now)|r")
     else
-        for _, ct in ipairs(entry.chatTypes) do send(entry.text, ct) end
+        for _, ct in ipairs(entry.chatTypes) do
+            if self:StillValid(ct) then send(entry.text, ct)
+            else VMH:Debug("skipped " .. ct .. " (no longer in that group): " .. entry.text) end
+        end
     end
     if #q > 0 then self:Schedule(gap) end
 end
@@ -159,11 +174,7 @@ end
 function A:Schedule(delay)
     if self.flushScheduled then return end
     self.flushScheduled = true
-    if C_Timer and C_Timer.After then
-        C_Timer.After(math.max(0.05, delay), function() A:Flush() end)
-    else
-        self:Flush()
-    end
+    VMH.After(math.max(0.05, delay), function() A:Flush() end)
 end
 
 function A:Enqueue(text, chatTypes, prio, expires)
