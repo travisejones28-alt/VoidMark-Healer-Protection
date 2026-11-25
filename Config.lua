@@ -38,7 +38,6 @@ function Cfg:Build()
     W.Fill(f, C.bg)
     W.Border(f, C.accent)
     f:Hide()
-    if type(UISpecialFrames) == "table" then table.insert(UISpecialFrames, "VoidMarkHealerConfig") end
 
     local title = CreateFrame("Frame", nil, f)
     title:SetPoint("TOPLEFT", 1, -1)

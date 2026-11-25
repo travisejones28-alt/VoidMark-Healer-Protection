@@ -71,7 +71,6 @@ CC.Classify = classify
 -- One lookup per distinct debuff; results are cached.
 ------------------------------------------------------------------------
 CC.tipCache = {}
-local scanTip
 local function tooltipLines(index, auraInstanceID)
     local lines = {}
     if C_TooltipInfo then
@@ -90,23 +89,7 @@ local function tooltipLines(index, auraInstanceID)
             return lines
         end
     end
-    -- older clients: hidden tooltip
-    if not scanTip then
-        local ok, tip = pcall(CreateFrame, "GameTooltip", "VoidMarkHealerScanTip", nil, "GameTooltipTemplate")
-        if not ok or not tip then return lines end
-        scanTip = tip
-    end
-    local ok = pcall(function()
-        scanTip:SetOwner(_G.WorldFrame, "ANCHOR_NONE")
-        scanTip:ClearLines()
-        scanTip:SetUnitDebuff("player", index)
-    end)
-    if not ok then return lines end
-    for i = 2, 6 do
-        local fs = _G["VoidMarkHealerScanTipTextLeft" .. i]
-        local text = fs and R(fs:GetText())
-        if type(text) == "string" then lines[#lines + 1] = text end
-    end
+    -- no modern tooltip API: skip (no Blizzard tooltip templates are used)
     return lines
 end
 

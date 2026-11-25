@@ -266,15 +266,45 @@ function A:PlaySound(key)
     end
 end
 
+-- Own on-screen warning (Blizzard's RaidWarningFrame is never touched).
+-- Fades out; its update script only runs while a message is visible.
+local warn
 function A:OnScreen(text, prio)
     if not VMH.db.visuals.onscreen then return end
-    local frame = _G.RaidWarningFrame
-    local add = _G.RaidNotice_AddMessage
-    if frame and type(add) == "function" then
-        local color = { r = 0.75, g = 0.45, b = 1 }
-        if prio >= 5 then color = { r = 1, g = 0.25, b = 0.3 } end
-        pcall(add, frame, text, color)
+    if not warn then
+        warn = CreateFrame("Frame", "VoidMarkHealerWarning", UIParent)
+        warn:SetSize(800, 60)
+        warn:SetPoint("TOP", UIParent, "TOP", 0, -180)
+        warn:SetFrameStrata("HIGH")
+        warn.lines = {}
+        for i = 1, 2 do
+            local fs = warn:CreateFontString(nil, "OVERLAY")
+            fs:SetFont(_G.STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF", 22, "OUTLINE")
+            if not fs:GetFont() then fs:SetFontObject(_G.GameFontNormalLarge) end
+            fs:SetPoint("TOP", warn, "TOP", 0, -(i - 1) * 28)
+            warn.lines[i] = fs
+        end
+        warn:Hide()
+        warn:SetScript("OnUpdate", function(self, elapsed)
+            self.left = (self.left or 0) - (elapsed or 0)
+            if self.left <= 0 then self:Hide() return end
+            self:SetAlpha(math.min(1, self.left / 0.8))
+        end)
     end
+    -- newest message on top, previous one below
+    local l1, l2 = warn.lines[1], warn.lines[2]
+    if warn:IsShown() then
+        l2:SetText(l1:GetText() or "")
+        local r, g, b = l1:GetTextColor()
+        l2:SetTextColor(r or 1, g or 1, b or 1)
+    else
+        l2:SetText("")
+    end
+    l1:SetText(text)
+    if prio >= 5 then l1:SetTextColor(1, 0.25, 0.3) else l1:SetTextColor(0.75, 0.45, 1) end
+    warn.left = 3.5
+    warn:SetAlpha(1)
+    warn:Show()
 end
 
 ------------------------------------------------------------------------

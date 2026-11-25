@@ -61,15 +61,35 @@ function W.Label(parent, text, size, color)
     return fs
 end
 
+-- Own tooltip frame: Blizzard's shared GameTooltip is never touched (taint safety).
+local tipFrame
+local function showTip(owner, text)
+    if not tipFrame then
+        tipFrame = CreateFrame("Frame", "VoidMarkHealerTooltip", UIParent)
+        tipFrame:SetFrameStrata("TOOLTIP")
+        tipFrame:SetClampedToScreen(true)
+        W.Fill(tipFrame, C.bg)
+        W.Border(tipFrame, C.accent)
+        tipFrame.text = tipFrame:CreateFontString(nil, "OVERLAY")
+        W.Font(tipFrame.text, 11)
+        tipFrame.text:SetPoint("TOPLEFT", 8, -6)
+        tipFrame.text:SetWidth(240)
+        tipFrame.text:SetJustifyH("LEFT")
+        tipFrame:Hide()
+    end
+    tipFrame.text:SetText(text)
+    local h = (tipFrame.text.GetStringHeight and tipFrame.text:GetStringHeight()) or 14
+    tipFrame:SetSize(256, math.max(20, (h or 14) + 12))
+    tipFrame:ClearAllPoints()
+    tipFrame:SetPoint("BOTTOMLEFT", owner, "TOPRIGHT", 4, 4)
+    tipFrame:Show()
+end
+local function hideTip() if tipFrame then tipFrame:Hide() end end
+
 local function tooltip(frame, text)
     if not text then return end
-    frame:HookScript("OnEnter", function(self)
-        if not _G.GameTooltip then return end
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetText(text, 1, 1, 1, 1, true)
-        GameTooltip:Show()
-    end)
-    frame:HookScript("OnLeave", function() if _G.GameTooltip then GameTooltip:Hide() end end)
+    frame:HookScript("OnEnter", function(self) showTip(self, text) end)
+    frame:HookScript("OnLeave", hideTip)
 end
 W.Tooltip = tooltip
 
@@ -212,13 +232,15 @@ local function getPopup()
     popup:EnableMouse(true)
     W.Fill(popup, C.bg)
     W.Border(popup, C.accent)
-    if type(UISpecialFrames) == "table" then table.insert(UISpecialFrames, "VoidMarkHealerDropdownList") end
     popup.buttons = {}
     popup:Hide()
     return popup
 end
 
-function W.CloseDropdown() if popup then popup:Hide() end end
+function W.CloseDropdown()
+    if popup then popup:Hide() end
+    if W.CloseColorChooser then W.CloseColorChooser() end
+end
 
 function W.Dropdown(parent, label, width, options, get, set)
     local f = CreateFrame("Frame", nil, parent)
@@ -318,38 +340,44 @@ end
 ------------------------------------------------------------------------
 -- Color swatch
 ------------------------------------------------------------------------
-local function openPicker(r, g, b, a, onChange)
-    local P = _G.ColorPickerFrame
-    if not P then
-        VMH:Print("The color picker isn't available here.")
-        return
-    end
-    local hasAlpha = a ~= nil
-    local function current()
-        local nr, ng, nb = P:GetColorRGB()
-        local na = a
-        if hasAlpha then
-            if P.GetColorAlpha then na = P:GetColorAlpha()
-            elseif _G.OpacitySliderFrame then na = 1 - _G.OpacitySliderFrame:GetValue() end
+-- Own color chooser (preset swatches): Blizzard's ColorPickerFrame is never touched.
+local PRESETS = {
+    { 0.85, 0.15, 0.25 }, { 1, 0.45, 0.1 }, { 0.95, 0.7, 0.1 }, { 0.3, 0.85, 0.35 }, { 0.2, 0.75, 0.9 },
+    { 0.25, 0.45, 1 }, { 0.62, 0.36, 1 }, { 0.9, 0.4, 0.8 }, { 0.9, 0.9, 0.9 }, { 0.05, 0.03, 0.09 },
+}
+local chooser
+local function openPicker(owner, onPick)
+    if not chooser then
+        chooser = CreateFrame("Frame", "VoidMarkHealerColorChooser", UIParent)
+        chooser:SetFrameStrata("FULLSCREEN_DIALOG")
+        chooser:SetClampedToScreen(true)
+        chooser:EnableMouse(true)
+        chooser:SetSize(#PRESETS * 22 + 6, 28)
+        W.Fill(chooser, C.bg)
+        W.Border(chooser, C.accent)
+        chooser.swatches = {}
+        for i, c in ipairs(PRESETS) do
+            local b = CreateFrame("Button", nil, chooser)
+            b:SetSize(18, 18)
+            b:SetPoint("LEFT", 4 + (i - 1) * 22, 0)
+            local t = b:CreateTexture(nil, "ARTWORK")
+            t:SetAllPoints()
+            t:SetColorTexture(c[1], c[2], c[3], 1)
+            W.Border(b, C.text)
+            b:SetScript("OnClick", function()
+                chooser:Hide()
+                if chooser.onPick then chooser.onPick(c[1], c[2], c[3]) end
+            end)
         end
-        return nr, ng, nb, na
+        chooser:Hide()
     end
-    local function apply() pcall(function() onChange(current()) end) end
-    local function cancel() onChange(r, g, b, a) end
-    local ok = pcall(function()
-    if P.SetupColorPickerAndShow then
-        P:SetupColorPickerAndShow({ r = r, g = g, b = b, opacity = a, hasOpacity = hasAlpha,
-            swatchFunc = apply, opacityFunc = apply, cancelFunc = cancel })
-    else
-        P.func, P.opacityFunc, P.cancelFunc = apply, apply, cancel
-        P.hasOpacity, P.opacity = hasAlpha, hasAlpha and (1 - a) or nil
-        P:SetColorRGB(r, g, b)
-        P:Hide()
-        P:Show()
-    end
-    end)
-    if not ok then VMH:Print("The color picker isn't available here. Colors can be reset with the profile reset.") end
+    if chooser:IsShown() and chooser.owner == owner then chooser:Hide(); return end
+    chooser.owner, chooser.onPick = owner, onPick
+    chooser:ClearAllPoints()
+    chooser:SetPoint("TOPLEFT", owner, "BOTTOMLEFT", 0, -2)
+    chooser:Show()
 end
+function W.CloseColorChooser() if chooser then chooser:Hide() end end
 
 function W.Color(parent, label, get, set)
     local f = CreateFrame("Button", nil, parent)
@@ -369,8 +397,8 @@ function W.Color(parent, label, get, set)
     end
     f:SetScript("OnClick", function()
         local c = get()
-        openPicker(c[1], c[2], c[3], c[4], function(r, g, b, a)
-            set({ r, g, b, c[4] and a or nil })
+        openPicker(f, function(r, g, b)
+            set({ r, g, b, c[4] })
             f:Refresh()
             if f.onChange then f.onChange() end
         end)

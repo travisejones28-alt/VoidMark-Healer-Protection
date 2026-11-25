@@ -109,15 +109,20 @@ end
 UIParent = CreateFrame("Frame", "UIParent")
 WorldFrame = CreateFrame("Frame", "WorldFrame")
 DEFAULT_CHAT_FRAME = { AddMessage = function(_, m) S.prints[#S.prints + 1] = m end }
-RaidWarningFrame = CreateFrame("Frame", "RaidWarningFrame")
-function RaidNotice_AddMessage(_, text) S.warnings[#S.warnings + 1] = text end
-UISpecialFrames = {}
+-- Blizzard-owned UI objects: the addon must never touch these (taint safety).
+local function forbidden(name)
+    return setmetatable({}, {
+        __index = function(_, k) error("TAINT: addon touched " .. name .. "." .. tostring(k)) end,
+        __newindex = function(_, k) error("TAINT: addon wrote " .. name .. "." .. tostring(k)) end,
+    })
+end
+RaidWarningFrame = forbidden("RaidWarningFrame")
+function RaidNotice_AddMessage() error("TAINT: addon called RaidNotice_AddMessage") end
+UISpecialFrames = forbidden("UISpecialFrames")
 SlashCmdList = {}
-GameTooltip = CreateFrame("Frame", "GameTooltip")
+GameTooltip = forbidden("GameTooltip")
 GameFontNormal, GameFontHighlight, ChatFontNormal = {}, {}, {}
-ColorPickerFrame = CreateFrame("Frame", "ColorPickerFrame")
-function ColorPickerFrame:SetupColorPickerAndShow(info) self.info = info end
-function ColorPickerFrame:GetColorRGB() return 0.1, 0.2, 0.3 end
+ColorPickerFrame = forbidden("ColorPickerFrame")
 STANDARD_TEXT_FONT = "Fonts\\FRIZQT__.TTF"
 SPELL_FAILED_LINE_OF_SIGHT = "Target not in line of sight"
 SPELL_FAILED_OUT_OF_RANGE = "Out of range"

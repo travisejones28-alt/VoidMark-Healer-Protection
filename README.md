@@ -111,6 +111,11 @@ Tests run against a mocked client (including secret values). They do not replace
 
 ## Changes
 
+**1.1.0** - Taint fix ("VoidMarkHealer has been blocked from an action only available to the Blizzard UI" when using
+Guild > Group Invite). The addon no longer touches any Blizzard UI object: own on-screen warning instead of the raid
+warning frame, own tooltip instead of GameTooltip, preset color swatches instead of the color picker, and its windows
+are no longer added to the Escape list (close with X or /vmh). Tests now fail if any of those objects is touched.
+
 **1.0.9** - Last-resort detection when Forever hides all crowd-control data in combat: if your cheapest heal is greyed
 out (not for mana, not dead/mounted/in a form/Shadowform), "Healer can't cast heals!" is announced, with recovery when
 it's castable again. Never double-alerts when the real effect is readable. Every Loss of Control event now writes a

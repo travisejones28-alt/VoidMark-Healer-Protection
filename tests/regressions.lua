@@ -885,6 +885,35 @@ test("readable silence wins over the greyed-out check (no double alert)", functi
     eq(count(chatTexts(), "can't cast"), 0)
 end)
 
+test("own on-screen warning, tooltip and color chooser work (no Blizzard frames)", function()
+    fresh()
+    VMH.Profiles:Select("Dungeon", true)
+    VMH.Announce:Alert("silence", { dur = "8s" })
+    local w = VoidMarkHealerWarning
+    assert(w and w.shown, "warning shown")
+    eq(w.lines[1].text, "Healer silenced! (8s)")
+    Advance(4)
+    assert(not w.shown, "warning fades out")
+    VMH.Config:Show("visuals")
+    local swatch
+    for _, f in ipairs(FRAMES) do if f.swatch then swatch = f end end
+    swatch.scripts.OnClick(swatch)
+    assert(VoidMarkHealerColorChooser.shown, "chooser opens")
+    local pick
+    for _, f in ipairs(FRAMES) do if f.parent == VoidMarkHealerColorChooser and f.scripts.OnClick then pick = f end end
+    pick.scripts.OnClick(pick)
+    assert(not VoidMarkHealerColorChooser.shown, "chooser closes after pick")
+    local btn
+    for _, f in ipairs(FRAMES) do if f.kind == "Button" and f.scripts.OnEnter and f.text and f.text.text == "Full status in chat" then btn = f end end
+    VMH.Config:Show("general")
+    for _, f in ipairs(FRAMES) do if f.kind == "Button" and f.text and f.text.text == "Full status in chat" then btn = f end end
+    btn.scripts.OnEnter(btn)
+    assert(VoidMarkHealerTooltip and VoidMarkHealerTooltip.shown, "own tooltip")
+    btn.scripts.OnLeave(btn)
+    assert(not VoidMarkHealerTooltip.shown)
+    VMH.Config.frame:Hide()
+end)
+
 test("not a healer: alerts held back", function()
     fresh()
     VMH.Profiles:Select("Dungeon", true)
