@@ -174,6 +174,11 @@ function UnitName(u)
     local d = S.units[u]
     if d then return d.name, d.surname end
 end
+function GetUnitName(u, showServer)
+    local d = S.units[u]
+    if not d then return nil end
+    return d.name .. ((showServer and d.surname) and ("-" .. d.surname) or "")
+end
 function UnitClass(u) if u == "player" then return "Priest", S.class end end
 function UnitGroupRolesAssigned() return S.role end
 function UnitHealth() return S.hpSecret and SECRET or S.hp end
@@ -231,10 +236,11 @@ C_LossOfControl = {
     end,
 }
 C_ChatInfo = {
-    SendChatMessage = function(msg, chatType)
+    SendChatMessage = function(msg, chatType, _, target)
         assert(chatType ~= "GUILD" and chatType ~= "CHANNEL" and chatType ~= "OFFICER", "forbidden channel " .. tostring(chatType))
         if (chatType == "SAY" or chatType == "YELL") and not S.instance then error("ADDON_ACTION_BLOCKED say outside instance") end
-        S.chat[#S.chat + 1] = { msg = msg, type = chatType, t = NOW }
+        if chatType == "WHISPER" then assert(type(target) == "string" and target ~= "", "whisper without target") end
+        S.chat[#S.chat + 1] = { msg = msg, type = chatType, target = target, t = NOW }
     end,
     InChatMessagingLockdown = function() return S.chatLocked end,
 }

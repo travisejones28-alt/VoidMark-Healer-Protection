@@ -123,11 +123,22 @@ local function friendly(unit)
     return VMH.Safe(_G.UnitExists, unit) == true and VMH.Safe(_G.UnitIsFriend, "player", unit) == true
 end
 
+-- Returns display name, whether a friendly heal target was found, and the
+-- name to whisper (players only, never yourself).
 local function healTargetName()
-    if friendly("mouseover") then return VMH.UnitFullName("mouseover"), true end
-    if friendly("target") then return VMH.UnitFullName("target"), true end
-    return nil, false
+    for _, unit in ipairs({ "mouseover", "target" }) do
+        if friendly(unit) then
+            local whisper
+            if VMH.Safe(_G.UnitIsPlayer, unit) == true and VMH.Safe(_G.UnitIsUnit, unit, "player") ~= true then
+                whisper = VMH.Safe(_G.GetUnitName, unit, true)
+                if type(whisper) ~= "string" or whisper == "" then whisper = (VMH.Safe(_G.UnitName, unit)) end
+            end
+            return VMH.UnitFullName(unit), true, whisper
+        end
+    end
+    return nil, false, nil
 end
+I.lastByPlayer = {}
 
 function I:NoteSpell(spellID)
     spellID = VMH.Number(spellID)
@@ -145,7 +156,7 @@ function I:OnUIError(a, b)
     local at = VMH.Now()
     -- the failed-cast event can arrive just after the error text
     VMH.After(0.1, function()
-        local name, hasFriend = healTargetName()
+        local name, hasFriend, whisperTo = healTargetName()
         local r = I.lastSpell
         local helpful = nil
         if r and math.abs(at - r.time) <= 0.5 then helpful = isHelpful(r.id) end
@@ -154,7 +165,14 @@ function I:OnUIError(a, b)
             if not hasFriend then return end
             if not friendly("mouseover") and VMH.Safe(_G.UnitCanAttack, "player", "target") == true then return end
         end
-        VMH.Announce:Alert(key, { name = name })
+        -- cooldown per player, so two different out-of-range players both hear about it
+        local cfg = VMH.db.alerts[key]
+        local who = key .. ":" .. tostring(name)
+        local last = I.lastByPlayer[who]
+        local t = VMH.Now()
+        if last and t - last < (cfg.cooldown or 0) then return end
+        I.lastByPlayer[who] = t
+        VMH.Announce:Alert(key, { name = name, whisperTo = whisperTo }, { ignoreCooldown = true, dedupe = who })
     end)
 end
 

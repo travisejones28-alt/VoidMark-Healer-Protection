@@ -132,13 +132,16 @@ function A:StillValid(chatType)
         return cat ~= nil and inGroup(cat)
     end
     if chatType == "SAY" or chatType == "YELL" then return VMH.Safe(_G.IsInInstance) == true end
+    if chatType == "WHISPER" then return true end
     return false
 end
 
-local function send(msg, chatType)
+local function send(msg, chatType, target)
     local fn = (C_ChatInfo and C_ChatInfo.SendChatMessage) or _G.SendChatMessage
     if type(fn) ~= "function" then return false end
-    local ok, err = pcall(fn, msg, chatType)
+    local ok, err
+    if chatType == "WHISPER" then ok, err = pcall(fn, msg, chatType, nil, target)
+    else ok, err = pcall(fn, msg, chatType) end
     if not ok then VMH:Debug("send failed (" .. chatType .. "): " .. tostring(err)) end
     return ok
 end
@@ -176,7 +179,7 @@ function A:Flush()
         VMH:Debug("chat locked: " .. entry.text .. (held and " (held)" or " (shown locally)"))
     else
         for _, ct in ipairs(entry.chatTypes) do
-            if self:StillValid(ct) then send(entry.text, ct)
+            if self:StillValid(ct) then send(entry.text, ct, entry.target)
             else VMH:Debug("skipped " .. ct .. " (no longer in that group): " .. entry.text) end
         end
     end
@@ -237,7 +240,7 @@ function A:CheckHeld()
     end
 end
 
-function A:Enqueue(text, chatTypes, prio, expires, key)
+function A:Enqueue(text, chatTypes, prio, expires, key, target)
     local q = self.queue
     -- Routine alerts never pile up behind a burst; keep at most 6 waiting.
     if #q >= 6 then
@@ -245,7 +248,7 @@ function A:Enqueue(text, chatTypes, prio, expires, key)
         if q[#q].prio > prio then return end
         table.remove(q)
     end
-    q[#q + 1] = { text = text, chatTypes = chatTypes, prio = prio, key = key, created = VMH.Now(),
+    q[#q + 1] = { text = text, chatTypes = chatTypes, prio = prio, key = key, target = target, created = VMH.Now(),
         expires = expires or (VMH.Now() + (prio >= 4 and 8 or 5)) }
     self:Flush()
 end
@@ -352,6 +355,17 @@ function A:AlertInner(key, vars, opts)
     local msg = sanitize((prefix ~= "" and (prefix .. " ") or "") .. text)
 
     local localOnly = opts.sim or (opts.test and not db.general.testsSendChat)
+    -- Whisper the player concerned (line of sight / range), without the group prefix.
+    local whisperTo = vars and vars.whisperTo
+    if cfg.whisper and cfg.whisperText and cfg.whisperText ~= "" and (whisperTo or opts.test) then
+        local wmsg = sanitize(A.Format(cfg.whisperText, vars))
+        if localOnly or not whisperTo then
+            VMH:Print("|cffffd200[" .. (opts.sim and "SIM" or "TEST") .. " -> WHISPER " .. tostring(whisperTo or "player") .. "]|r " .. wmsg)
+        elseif outgoing then
+            VMH:Debug("whisper " .. key .. " -> " .. tostring(whisperTo))
+            self:Enqueue(wmsg, { "WHISPER" }, def.prio, opts.expires, key, whisperTo)
+        end
+    end
     if localOnly then
         local where = #chatTypes > 0 and table.concat(chatTypes, "+") or (selfPrint and "self" or "no channel")
         VMH:Print("|cffffd200[" .. (opts.sim and "SIM" or "TEST") .. " -> " .. where .. "]|r " .. msg)

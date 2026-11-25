@@ -164,10 +164,10 @@ end
 function Cfg:AlertEditor(page, startY, firstKey)
     local ed = CreateFrame("Frame", nil, page.frame)
     ed:SetPoint("TOPLEFT", page.frame, "TOPLEFT", 296, -startY + 4)
-    ed:SetSize(320, 448)
+    ed:SetSize(320, 470)
     W.Fill(ed, { 0.08, 0.055, 0.13, 1 })
     W.Border(ed, C.border)
-    ed.height = 454
+    ed.height = 476
     ed.key = firstKey -- widgets read their value as soon as they are created
     local function cfg() return db().alerts[ed.key] end
     local y = 8
@@ -231,7 +231,20 @@ function Cfg:AlertEditor(page, startY, firstKey)
             ed.thresholds[key] = s
         end
     end
-    y = y + 46
+    -- whisper controls share the threshold slot (only line of sight / range have them)
+    ed.whisper = CreateFrame("Frame", nil, ed)
+    ed.whisper:SetSize(300, 68)
+    ed.whisper:SetPoint("TOPLEFT", ed, "TOPLEFT", 10, -y)
+    local wcheck = W.Check(ed.whisper, "Whisper the player", function() return cfg().whisper == true end,
+        function(v) cfg().whisper = v end, "Sends the message below privately to the player you were trying to heal.")
+    wcheck:SetWidth(280)
+    wcheck:SetPoint("TOPLEFT", 0, 0)
+    local wtext = W.EditBox(ed.whisper, nil, 300, function() return cfg().whisperText or "" end,
+        function(v) cfg().whisperText = (v ~= "" and v) or VMH.ALERT_BY_KEY[ed.key].whisperText end)
+    wtext:SetPoint("TOPLEFT", 0, -26)
+    ed.whisperWidgets = { wcheck, wtext }
+    ed.whisper:Hide()
+    y = y + 68
     local test = W.Button(ed, "Test this alert", 120, 22, function()
         VMH.Announce:Alert(ed.key, SAMPLE, { test = true })
     end)
@@ -244,6 +257,12 @@ function Cfg:AlertEditor(page, startY, firstKey)
         for k, s in pairs(self.thresholds) do
             if k == key then s:Show(); s:Refresh() else s:Hide() end
         end
+        if VMH.ALERT_BY_KEY[key].whisperText then
+            self.whisper:Show()
+            for _, w in ipairs(self.whisperWidgets) do w:Refresh() end
+        else
+            self.whisper:Hide()
+        end
         self:Refresh()
     end
     function ed:Refresh()
@@ -251,6 +270,7 @@ function Cfg:AlertEditor(page, startY, firstKey)
         for _, w in ipairs(widgets) do w:Refresh() end
         local s = self.thresholds[self.key]
         if s then s:Refresh() end
+        if self.whisper and self.whisper:IsShown() then for _, w in ipairs(self.whisperWidgets) do w:Refresh() end end
     end
     return ed
 end

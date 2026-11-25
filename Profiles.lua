@@ -44,6 +44,16 @@ function P:Load()
     if cdb.autoSwitch == nil then cdb.autoSwitch = true end
     cdb.autoMap = type(cdb.autoMap) == "table" and cdb.autoMap or {}
     if db.runIn == nil then db.runIn = "dungeonraid" end
+    -- 1.0.6: out-of-range alert becomes a whisper to that player (once)
+    if not db.rangeWhisperSet then
+        db.rangeWhisperSet = true
+        for _, prof in pairs(db.profiles) do
+            local r = type(prof) == "table" and type(prof.alerts) == "table" and prof.alerts.range
+            if type(r) == "table" then
+                r.enabled, r.whisper, r.channels, r.cooldown = true, true, {}, 10
+            end
+        end
+    end
     -- 1.0.3: group messages start with the skull marker (once; a prefix you set is kept)
     if not db.skullPrefixSet then
         db.skullPrefixSet = true

@@ -21,8 +21,10 @@ VMH.ALERTS = {
     { key = "aggro",          tab = "aggro", label = "Enemy aggro",        prio = 3, text = "Healer has aggro! ({name})", context = "pve" },
     { key = "threat",         tab = "aggro", label = "Excessive threat",   prio = 2, text = "Healer threat high ({pct}%)", threshold = { 90, 60, 100, "Threat at %" }, context = "pve" },
     { key = "multiEnemy",     tab = "aggro", label = "Enemies on you", prio = 3, text = "{count} enemies on the healer!", threshold = { 2, 2, 6, "Enemies" } },
-    { key = "los",            tab = "aggro", label = "Line of sight", prio = 1, text = "Can't heal - out of line of sight ({name})" },
-    { key = "range",          tab = "aggro", label = "Out of range",  prio = 1, text = "Can't heal - out of range ({name})" },
+    { key = "los",            tab = "aggro", label = "Line of sight", prio = 1, text = "Can't heal - out of line of sight ({name})",
+      whisperText = "You're out of my line of sight - I can't heal you!" },
+    { key = "range",          tab = "aggro", label = "Out of range",  prio = 1, text = "Can't heal - out of range ({name})",
+      whisperText = "You're out of my healing range - move closer!" },
     -- Crowd control
     { key = "silence",        tab = "cc", label = "Silence",               prio = 5, text = "Healer silenced! ({dur})" },
     { key = "interrupt",      tab = "cc", label = "Interrupt / lockout", prio = 5, text = "Healer interrupted! {school} school locked out ({dur})" },
@@ -80,7 +82,14 @@ local function alertDefaults(a)
     if a.key == "manaRecovered" or a.key == "drinkDone" or a.key == "los" or a.key == "range" or a.key == "lowHealth" or a.key == "root" then
         t.channels = { self = true }
     end
-    if a.key == "range" or a.key == "threat" then t.enabled = false end
+    if a.key == "threat" then t.enabled = false end
+    -- Line of sight / range can whisper the player you were trying to heal.
+    if a.whisperText then
+        t.whisper = a.key == "range"
+        t.whisperText = a.whisperText
+    end
+    -- Out of range: whisper the player only; the group isn't told.
+    if a.key == "range" then t.channels = {}; t.cooldown = 10 end
     if a.key == "countdown" then t.sound = "none"; t.onscreen = false end
     if a.key == "recovered" then t.sound = "ready" end
     if a.key == "los" or a.key == "range" then t.cooldown = 8 end

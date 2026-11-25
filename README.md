@@ -110,6 +110,10 @@ Tests run against a mocked client (including secret values). They do not replace
 
 ## Changes
 
+**1.0.6** - Out of range now whispers the player you were trying to heal ("You're out of my healing range - move
+closer!"), 10s cooldown per player, never posted to the group; NPCs and yourself are never whispered. Line of sight
+has the same whisper option (off by default). Both whisper texts are editable on the Aggro & Threat tab.
+
 **1.0.5** - Chat lockdown: when the game blocks addon group chat (e.g. boss fights), alerts still show for you;
 out of mana, low mana, death and self-res are posted when chat unlocks - only if still true. Crowd control and aggro
 are not posted late (they'd be wrong by then).
