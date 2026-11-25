@@ -355,7 +355,7 @@ function A:AlertInner(key, vars, opts)
     local msg = sanitize((prefix ~= "" and (prefix .. " ") or "") .. text)
 
     local localOnly = opts.sim or (opts.test and not db.general.testsSendChat)
-    -- Whisper the player concerned (line of sight / range), without the group prefix.
+    -- Whisper the player concerned (line of sight), without the group prefix.
     local whisperTo = vars and vars.whisperTo
     if cfg.whisper and cfg.whisperText and cfg.whisperText ~= "" and (whisperTo or opts.test) then
         local wmsg = sanitize(A.Format(cfg.whisperText, vars))
