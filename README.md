@@ -111,6 +111,9 @@ Tests run against a mocked client (including secret values). They do not replace
 
 ## Changes
 
+**1.1.1** - Sounds off by default (alert sounds and countdown ticks), including existing profiles once. Turn back on
+under Visuals & Sounds > Sounds.
+
 **1.1.0** - Taint fix ("VoidMarkHealer has been blocked from an action only available to the Blizzard UI" when using
 Guild > Group Invite). The addon no longer touches any Blizzard UI object: own on-screen warning instead of the raid
 warning frame, own tooltip instead of GameTooltip, preset color swatches instead of the color picker, and its windows

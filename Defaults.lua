@@ -116,7 +116,7 @@ function VMH.BaseProfile()
             recoveryShort = false,     -- recovery announcement for effects under 5s
             chat = true,
             onscreen = true,
-            sound = true,
+            sound = false,
         },
         display = {
             enabled = true, locked = true, scale = 1.0, alpha = 1.0,
@@ -130,7 +130,7 @@ function VMH.BaseProfile()
         },
         visuals = {
             onscreen = true,           -- master switch for on-screen warnings
-            sound = true,              -- master switch for sounds
+            sound = false,             -- master switch for sounds (off: you already know when you're CC'd)
             soundChannel = "Master",
         },
         history = { enabled = true },

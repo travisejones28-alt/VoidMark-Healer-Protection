@@ -914,6 +914,22 @@ test("own on-screen warning, tooltip and color chooser work (no Blizzard frames)
     VMH.Config.frame:Hide()
 end)
 
+test("sounds off by default and for existing profiles; can be turned back on", function()
+    fresh()
+    VMH.Profiles:Select("Dungeon", true)
+    S.sounds = {}
+    addLoC("SILENCE", 15487, 8)
+    play(9)
+    eq(#S.sounds, 0, "no sounds")
+    VoidMarkHealerDB.soundsOffSet = nil
+    VoidMarkHealerDB.profiles.Raid.visuals.sound = true
+    VMH.Profiles:Load()
+    eq(VoidMarkHealerDB.profiles.Raid.visuals.sound, false, "old profile switched off")
+    VoidMarkHealerDB.profiles.Raid.visuals.sound = true
+    VMH.Profiles:Load()
+    eq(VoidMarkHealerDB.profiles.Raid.visuals.sound, true, "your later choice sticks")
+end)
+
 test("not a healer: alerts held back", function()
     fresh()
     VMH.Profiles:Select("Dungeon", true)

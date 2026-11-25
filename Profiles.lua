@@ -49,6 +49,16 @@ function P:Load()
         if type(prof) == "table" and type(prof.alerts) == "table" then prof.alerts.range = nil end
     end
     db.rangeWhisperSet = nil
+    -- 1.1.1: sounds off by default (once; turning them back on later sticks)
+    if not db.soundsOffSet then
+        db.soundsOffSet = true
+        for _, prof in pairs(db.profiles) do
+            if type(prof) == "table" then
+                if type(prof.visuals) == "table" then prof.visuals.sound = false end
+                if type(prof.countdown) == "table" then prof.countdown.sound = false end
+            end
+        end
+    end
     -- 1.0.3: group messages start with the skull marker (once; a prefix you set is kept)
     if not db.skullPrefixSet then
         db.skullPrefixSet = true
