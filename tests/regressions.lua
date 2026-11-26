@@ -50,6 +50,7 @@ local function fresh()
     VMH.Mana.state, VMH.Mana.drinking, VMH.Mana.needRecover, VMH.Mana.peakMax = "ok", false, false, 0
     VMH.Health.state, VMH.Health.dead = "ok", false
     VMH.Threat.aggro, VMH.Threat.multi, VMH.Threat.threatHigh = false, false, false
+    VMH.Threat.attackers, VMH.Threat.playerAttackers, VMH.Threat.aggroSince = 0, 0, nil
     VMH.Display.preview = false
     VMH.debugLog = {}
     for k in pairs(VMH.Mana) do if k == "pending" then VMH.Mana.pending = false end end
@@ -272,7 +273,7 @@ test("channels: raid dedupe, self only, say outside instance skipped", function(
     Advance(0.2)
     local c = chatTexts()
     eq(#c, 1, "one message")
-    eq(c[1], "RAID:{skull} Healer silenced! (8s)")
+    eq(c[1], "RAID:{diamond} Healer silenced! (8s)")
     S.chat = {}
     S.raid = false
     S.homeGroup = false
@@ -281,7 +282,7 @@ test("channels: raid dedupe, self only, say outside instance skipped", function(
     VMH.db.alerts.stun.channels = { auto = true, party = true }
     VMH.Announce:Alert("stun", { dur = "4s" })
     Advance(1.2)
-    eq(chatTexts()[1], "INSTANCE_CHAT:{skull} Healer stunned! (4s)")
+    eq(chatTexts()[1], "INSTANCE_CHAT:{diamond} Healer stunned! (4s)")
     S.chat = {}
     VMH.db.alerts.fear.channels = { self = true }
     VMH.Announce:Alert("fear", {})
@@ -327,7 +328,7 @@ test("simulations stay local and are not recorded", function()
     eq(#S.chat, 0, "no group chat from simulations")
     eq(VMH.History.session.cc, 0)
     eq(VMH.History.session.blockedTime, 0)
-    assert(has(S.prints, "[SIM -> PARTY]|r {skull} Healer silenced! (8s)"), "sim silence shown")
+    assert(has(S.prints, "[SIM -> PARTY]|r {diamond} Healer silenced! (8s)"), "sim silence shown")
     assert(has(S.prints, "healing resumed! (still rooted)"), "sim overlap recovery")
     noErrors()
 end)
@@ -676,7 +677,7 @@ test("run in: dungeons and raids only is the default and pauses the open world",
     -- simulations still work for setup
     SlashCmdList.VOIDMARKHEALER("test silence")
     Advance(0.5)
-    assert(has(S.prints, "[SIM -> PARTY]|r {skull} Healer silenced! (8s)"), "sim works in world")
+    assert(has(S.prints, "[SIM -> PARTY]|r {diamond} Healer silenced! (8s)"), "sim works in world")
     SlashCmdList.VOIDMARKHEALER("stop")
     Advance(0.5)
     -- inside a dungeon it runs
@@ -703,22 +704,39 @@ test("run in: battlegrounds only with the instances option", function()
     eq(VMH.sv.runIn, "dungeonraid")
 end)
 
-test("skull prefix: on by default, old blank prefixes upgraded once, custom kept", function()
+test("icons: per alert kind, old skull prefix removed once, editable", function()
     fresh()
     VMH.Profiles:Select("Dungeon", true)
-    VMH.Announce:Alert("silence", { dur = "8s" })
-    Advance(0.3)
-    eq(S.chat[1].msg, "{skull} Healer silenced! (8s)")
-    assert(not has(S.prints, "{skull}"), "local prints stay clean")
-    VoidMarkHealerDB.skullPrefixSet = nil
-    VoidMarkHealerDB.profiles.Dungeon.announce.prefix = ""
-    VoidMarkHealerDB.profiles.Raid.announce.prefix = "[Heals]"
+    local A = VMH.Announce
+    local function sent(key, vars)
+        S.chat = {}; A.recent, A.last = {}, {}; A.lastSend = -100
+        A:Alert(key, vars or {}); Advance(1.2)
+        return S.chat[1] and S.chat[1].msg
+    end
+    eq(sent("aggro"), "{skull} Healer has aggro!")
+    eq(sent("oom", { pct = 8 }), "{star} Out of mana! (8%)")
+    eq(sent("death"), "{cross} Healer is dead!")
+    eq(sent("silence", { dur = "8s" }), "{diamond} Healer silenced! (8s)")
+    eq(sent("recovered"), "{triangle} Healer free - healing resumed!")
+    VMH.db.alerts.oom.icon = "{square}"
+    eq(sent("oom", { pct = 8 }), "{square} Out of mana! (8%)")
+    VMH.db.alerts.oom.icon = ""
+    eq(sent("oom", { pct = 8 }), "Out of mana! (8%)")
+    assert(not has(S.prints, "{"), "local prints stay clean")
+    -- an old profile with the all-skull prefix gets per-alert icons, no double icon
+    VoidMarkHealerDB.iconsSet = nil
+    VoidMarkHealerDB.profiles.Dungeon.announce.prefix = "{skull}"
+    VoidMarkHealerDB.profiles.Dungeon.alerts.oom.icon = nil
     VMH.Profiles:Load()
-    eq(VoidMarkHealerDB.profiles.Dungeon.announce.prefix, "{skull}")
-    eq(VoidMarkHealerDB.profiles.Raid.announce.prefix, "[Heals]")
-    VoidMarkHealerDB.profiles.Dungeon.announce.prefix = ""
+    VMH.Profiles:Select("Dungeon", true)
+    eq(VMH.db.announce.prefix, "")
+    eq(sent("oom", { pct = 8 }), "{star} Out of mana! (8%)")
+    -- a prefix you set yourself later is kept
+    VoidMarkHealerDB.profiles.Dungeon.announce.prefix = "[Heals]"
     VMH.Profiles:Load()
-    eq(VoidMarkHealerDB.profiles.Dungeon.announce.prefix, "", "turning it off sticks")
+    eq(VoidMarkHealerDB.profiles.Dungeon.announce.prefix, "[Heals]")
+    VMH.Profiles:Select("Dungeon", true)
+    eq(sent("oom", { pct = 8 }), "{star} [Heals] Out of mana! (8%)")
 end)
 
 test("debug trail explains a missed alert and survives reload", function()

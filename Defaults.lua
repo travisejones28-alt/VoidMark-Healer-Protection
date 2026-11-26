@@ -58,6 +58,24 @@ VMH.CHANNELS = {
     { key = "self",     label = "Self only" },
 }
 
+-- Raid icons for group messages ({code} shows as the icon in chat).
+VMH.ICONS = {
+    { value = "", label = "None" }, { value = "{skull}", label = "Skull" }, { value = "{cross}", label = "Cross" },
+    { value = "{square}", label = "Square" }, { value = "{moon}", label = "Moon" }, { value = "{triangle}", label = "Triangle" },
+    { value = "{diamond}", label = "Diamond" }, { value = "{circle}", label = "Circle" }, { value = "{star}", label = "Star" },
+}
+local ICON_FOR = {
+    aggro = "{skull}", threat = "{skull}", multiEnemy = "{skull}", los = "{skull}",
+    lowMana = "{star}", oom = "{star}", manaRecovered = "{star}", drinking = "{star}", drinkDone = "{star}",
+    lowHealth = "{cross}", criticalHealth = "{cross}", death = "{cross}", selfRes = "{cross}", revived = "{cross}",
+    recovered = "{triangle}",
+}
+VMH.DefaultIcon = function(key)
+    if ICON_FOR[key] then return ICON_FOR[key] end
+    local a = VMH.ALERT_BY_KEY[key]
+    return (a and a.tab == "cc") and "{diamond}" or ""
+end
+
 VMH.SOUNDS = {
     { key = "none",    label = "None",        id = nil },
     { key = "warning", label = "Raid warning", id = 8959 },
@@ -76,6 +94,7 @@ local function alertDefaults(a)
         sound = (a.prio >= 5) and "warning" or "none",
         onscreen = a.prio >= 4,
         context = a.context or "any",
+        icon = VMH.DefaultIcon(a.key),
     }
     if a.threshold then t.threshold = a.threshold[1] end
     -- Routine notices default to local only so groups are not spammed.
@@ -103,7 +122,7 @@ function VMH.BaseProfile()
         },
         announce = {
             outgoing = true,           -- false = nothing leaves this client
-            prefix = "{skull}",        -- raid-marker code shown as an icon in group chat
+            prefix = "",               -- optional extra text after each alert's icon
             throttle = 1.0,            -- seconds between outgoing messages
             duplicateWindow = 6,       -- identical text within this window is dropped
             hysteresis = 10,           -- percentage points before mana/health re-arm

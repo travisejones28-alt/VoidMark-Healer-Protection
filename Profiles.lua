@@ -87,6 +87,15 @@ function P:Load()
         for _, l in ipairs(VMH.debugLog or {}) do db.log[#db.log + 1] = l end
         VMH.debugLog = db.log
     end
+    -- 1.1.5: icons are per alert; the old all-skull prefix is removed (once)
+    if not db.iconsSet then
+        db.iconsSet = true
+        for _, prof in pairs(db.profiles) do
+            if type(prof) == "table" and type(prof.announce) == "table" and prof.announce.prefix == "{skull}" then
+                prof.announce.prefix = ""
+            end
+        end
+    end
     VMH:Debug("---- loaded v" .. VMH.version .. ", profile " .. tostring(cdb.profile))
     self.lastKey = nil
 end

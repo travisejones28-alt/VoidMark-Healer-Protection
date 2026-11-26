@@ -214,7 +214,10 @@ function Cfg:AlertEditor(page, startY, firstKey)
     local onscreen = track(W.Check(ed, "On-screen warning", function() return cfg().onscreen end, function(v) cfg().onscreen = v end))
     onscreen:SetWidth(280)
     put(onscreen, 24)
-    put(track(W.Dropdown(ed, "Use in", 200, {
+    local icon = track(W.Dropdown(ed, "Icon", 96, VMH.ICONS, function() return cfg().icon or "" end,
+        function(v) cfg().icon = v end))
+    icon:SetPoint("TOPLEFT", ed, "TOPLEFT", 214, -y)
+    put(track(W.Dropdown(ed, "Use in", 196, {
         { value = "any", label = "PvE and PvP" }, { value = "pve", label = "PvE only" }, { value = "pvp", label = "PvP only" },
     }, function() return cfg().context end, function(v) cfg().context = v end)), 44)
 
@@ -387,9 +390,9 @@ function Cfg:Build_announce(page)
         "Off: nothing leaves your client. Self-only and on-screen alerts still work.")
     check(page, 12, "Test buttons send real chat", function() return db().general.testsSendChat end,
         function(v) db().general.testsSendChat = v end)
-    page:Place(W.EditBox(page.frame, "Message prefix (raid icon or text)", 200, function() return an().prefix end,
+    page:Place(W.EditBox(page.frame, "Extra text before every message (optional)", 200, function() return an().prefix end,
         function(v) an().prefix = v end), 12, 48)
-    page:Note("Icons: {skull} {cross} {square} {moon} {triangle} {diamond} {circle} {star}. Leave empty for none. Also work inside alert texts.", 30)
+    page:Note("Each alert has its own icon (> on its tab): skull = aggro, star = mana, cross = health/death, diamond = crowd control, triangle = healing resumed.", 30)
     slider(page, 12, "Minimum time between messages", 0.5, 5, 0.5, function() return an().throttle end,
         function(v) an().throttle = v end, function(v) return v .. "s" end)
     slider(page, 12, "Drop identical messages within", 0, 30, 1, function() return an().duplicateWindow end,

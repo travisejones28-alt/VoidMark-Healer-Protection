@@ -111,6 +111,10 @@ Tests run against a mocked client (including secret values). They do not replace
 
 ## Changes
 
+**1.1.5** - Each kind of alert gets its own raid icon in group chat: skull = aggro / enemies / line of sight,
+star = mana and drinking, cross = health and death, diamond = crowd control and countdown, triangle = healing resumed.
+Change any alert's icon with the Icon dropdown on its settings (> on its tab). The old all-skull prefix is removed once.
+
 **1.1.4** - No more "VoidMarkHealer has been blocked from an action only available to the Blizzard UI"
 after typing a slash command such as `/ginvite`. The addon re-assigned the game's slash-command list
 when it loaded, which made every slash command typed afterwards count as the addon's.

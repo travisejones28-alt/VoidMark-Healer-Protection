@@ -382,7 +382,9 @@ function A:AlertInner(key, vars, opts)
     local chatTypes, selfPrint = self:ResolveChannels(cfg.channels)
     local outgoing = db.announce.outgoing
     local prefix = db.announce.prefix or ""
-    local msg = sanitize((prefix ~= "" and (prefix .. " ") or "") .. text)
+    local icon = cfg.icon or ""
+    local lead = icon .. ((icon ~= "" and prefix ~= "") and " " or "") .. prefix
+    local msg = sanitize((lead ~= "" and (lead .. " ") or "") .. text)
 
     local localOnly = opts.sim or (opts.test and not db.general.testsSendChat)
     -- Whisper the player concerned (line of sight), without the group prefix.
