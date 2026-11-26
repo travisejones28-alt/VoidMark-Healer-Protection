@@ -23,8 +23,19 @@ local function hostileOnMe(unit)
     return VMH.Safe(_G.UnitIsUnit, unit .. "target", "player") == true
 end
 
+-- Elite = elite, rare elite or boss. If the game hides the classification
+-- the mob counts as elite, so a real elite is never missed.
+local ELITE = { elite = true, rareelite = true, worldboss = true }
+local function isElite(unit)
+    local c = VMH.Safe(_G.UnitClassification, unit)
+    if type(c) ~= "string" then return true end
+    return ELITE[c] == true
+end
+T.IsElite = isElite
+
 function T:Count()
     local seen, count, players, firstNpc = {}, 0, 0, nil
+    local elites, firstElite = 0, nil
     local function consider(unit)
         if not hostileOnMe(unit) then return end
         local guid = VMH.Safe(_G.UnitGUID, unit)
@@ -37,7 +48,13 @@ function T:Count()
         end
         count = count + 1
         if VMH.Safe(_G.UnitIsPlayer, unit) == true then players = players + 1
-        elseif not firstNpc then firstNpc = VMH.UnitFullName(unit) end
+        else
+            if not firstNpc then firstNpc = VMH.UnitFullName(unit) end
+            if isElite(unit) then
+                elites = elites + 1
+                if not firstElite then firstElite = VMH.UnitFullName(unit) end
+            end
+        end
     end
     if C_NamePlate and type(C_NamePlate.GetNamePlates) == "function" then
         local plates = VMH.Safe(C_NamePlate.GetNamePlates)
@@ -49,7 +66,7 @@ function T:Count()
         end
     end
     for _, u in ipairs(EXTRA_UNITS) do consider(u) end
-    return count, players, firstNpc
+    return count, players, firstNpc, elites, firstElite
 end
 
 local function threatStatus()
@@ -75,7 +92,7 @@ function T:Evaluate()
         return
     end
     local now = VMH.Now()
-    local count, players, npcName = self:Count()
+    local count, players, npcName, elites, eliteName = self:Count()
     self.attackers, self.playerAttackers = count, players
     local a = VMH.db.alerts
     local inCombat = VMH.Safe(_G.UnitAffectingCombat, "player") == true
@@ -84,6 +101,11 @@ function T:Evaluate()
     local status = threatStatus()
     local hasAggro
     if status then hasAggro = status >= 2 else hasAggro = inCombat and (count - players) > 0 end
+    -- Elite mobs only (default): a visible elite must be the one on you.
+    if hasAggro and a.aggro.eliteOnly ~= false then
+        hasAggro = elites > 0
+        npcName = eliteName
+    end
     if hasAggro then
         self.calmSince = nil
         if not self.aggro then

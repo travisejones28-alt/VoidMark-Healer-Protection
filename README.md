@@ -111,6 +111,9 @@ Tests run against a mocked client (including secret values). They do not replace
 
 ## Changes
 
+**1.1.9** - Aggro is only announced when an elite, rare elite or boss is on you; normal and trivial mobs are ignored.
+If the game hides a mob's classification it counts as elite. Turn off under Aggro & Threat > "Aggro: elite mobs only".
+
 **1.1.8** - Icon colors: skull = aggro, red cross = bad (crowd control, countdown, low/critical health, death,
 self-res), star = mana warnings, green triangle = good (healing resumed, mana recovered, back up, done drinking).
 Existing profiles move over once; icons you picked yourself are kept.

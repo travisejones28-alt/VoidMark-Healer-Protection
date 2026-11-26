@@ -103,6 +103,7 @@ local function alertDefaults(a)
         t.channels = { self = true }
     end
     if a.key == "threat" then t.enabled = false end
+    if a.key == "aggro" then t.eliteOnly = true end   -- ignore normal / trivial mobs
     -- Line of sight can whisper the player you were trying to heal (off by default).
     if a.whisperText then
         t.whisper = false

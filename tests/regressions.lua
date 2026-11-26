@@ -1073,6 +1073,7 @@ test("aggro must last 2 seconds", function()
     fresh()
     VMH.Profiles:Select("Dungeon", true)
     S.inCombat = true
+    S.units.target = { name = "Scarlet", surname = "Guard", hostile = true, guid = "G", targetsPlayer = true, class = "elite" }
     S.threat = 3
     Emit("UNIT_THREAT_SITUATION_UPDATE", "player")
     Advance(1)
@@ -1084,6 +1085,29 @@ test("aggro must last 2 seconds", function()
     Emit("UNIT_THREAT_SITUATION_UPDATE", "player")
     Advance(3)
     eq(count(chatTexts(), "Healer has aggro!"), 1, "held aggro: announced")
+    S.threat, S.inCombat = 0, false
+end)
+
+test("aggro: elite mobs only (normal mobs ignored, hidden class counts, can be turned off)", function()
+    fresh()
+    VMH.Profiles:Select("Dungeon", true)
+    S.inCombat = true
+    S.threat = 3
+    local function pull(class, secret)
+        S.chat = {}; VMH.Announce.last, VMH.Announce.recent = {}, {}
+        VMH.Threat.aggro, VMH.Threat.aggroSince = false, nil
+        S.units.target = { name = "Mob", hostile = true, guid = "M", targetsPlayer = true, class = class, classSecret = secret }
+        Emit("UNIT_THREAT_SITUATION_UPDATE", "player"); Advance(3)
+        return count(chatTexts(), "Healer has aggro!") == 1
+    end
+    assert(not pull("normal"), "normal mob: quiet")
+    assert(not pull("trivial"), "trivial mob: quiet")
+    assert(pull("elite"), "elite: announced")
+    assert(pull("rareelite"), "rare elite: announced")
+    assert(pull("worldboss"), "boss: announced")
+    assert(pull(nil, true), "hidden classification: announced (never miss an elite)")
+    VMH.db.alerts.aggro.eliteOnly = false
+    assert(pull("normal"), "setting off: normal mobs too")
     S.threat, S.inCombat = 0, false
 end)
 

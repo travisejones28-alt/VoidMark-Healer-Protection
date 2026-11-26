@@ -210,6 +210,7 @@ function IsInRaid() return S.raid end
 function HasSoulstone() return S.soulstone end
 function UnitExists(u) return S.units[u] ~= nil or u == "player" end
 function UnitGUID(u) local d = S.units[u]; return d and d.guid end
+function UnitClassification(u) local d = S.units[u]; if not d then return nil end if d.classSecret then return SECRET end return d.class or "normal" end
 function UnitIsPlayer(u) local d = S.units[u]; return d and d.isPlayer or false end
 function UnitCanAttack(_, u) local d = S.units[u]; return d and d.hostile or false end
 function UnitIsFriend(_, u) local d = S.units[u]; return d and not d.hostile or false end
