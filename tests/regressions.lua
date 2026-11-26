@@ -1111,6 +1111,55 @@ test("aggro: elite mobs only (normal mobs ignored, hidden class counts, can be t
     S.threat, S.inCombat = 0, false
 end)
 
+test("aggro elite check: mixed pulls, hidden threat data, brief targeting", function()
+    fresh()
+    VMH.Profiles:Select("Dungeon", true)
+    S.inCombat = true
+    local function reset()
+        S.chat = {}; VMH.Announce.last, VMH.Announce.recent = {}, {}
+        VMH.Threat.aggro, VMH.Threat.aggroSince, VMH.Threat.calmSince = false, nil, nil
+        S.units, S.plates = {}, {}
+    end
+    local function wait(sec) Emit("UNIT_THREAT_SITUATION_UPDATE", "player"); Advance(sec or 3) end
+    -- 1. normal mob on you, elite on the tank: quiet
+    reset(); S.threat = 3
+    S.plates = { "nameplate1", "nameplate2" }
+    S.units.nameplate1 = { name = "Rat", hostile = true, guid = "R", targetsPlayer = true, class = "normal" }
+    S.units.nameplate2 = { name = "Big", surname = "Elite", hostile = true, guid = "E", targetsPlayer = false, class = "elite" }
+    wait()
+    eq(count(chatTexts(), "aggro"), 0, "normal on me, elite on tank")
+    -- 2. normal and elite both on you: announced with the elite's name
+    reset(); S.threat = 3
+    S.plates = { "nameplate1", "nameplate2" }
+    S.units.nameplate1 = { name = "Rat", hostile = true, guid = "R", targetsPlayer = true, class = "normal" }
+    S.units.nameplate2 = { name = "Big", surname = "Elite", hostile = true, guid = "E", targetsPlayer = true, class = "elite" }
+    wait()
+    eq(count(chatTexts(), "Healer has aggro! (Big Elite)"), 1, table.concat(chatTexts(), " | "))
+    -- 3. threat data hidden by the game: falls back to who is targeting you
+    reset(); S.threat = nil
+    S.units.target = { name = "Big", surname = "Elite", hostile = true, guid = "E", targetsPlayer = true, class = "elite" }
+    wait()
+    eq(count(chatTexts(), "Healer has aggro! (Big Elite)"), 1, "hidden threat, elite targeting me")
+    -- 4. elite only glances at you for 1 second: quiet
+    reset(); S.threat = 3
+    S.units.target = { name = "Big", surname = "Elite", hostile = true, guid = "E", targetsPlayer = true, class = "elite" }
+    wait(1)
+    S.units.target.targetsPlayer = false; S.threat = 0
+    wait(3)
+    eq(count(chatTexts(), "aggro"), 0, "1s glance")
+    -- 5. dead elite still "targeting" you: ignored
+    reset(); S.threat = 3
+    S.units.target = { name = "Corpse", hostile = true, guid = "D", targetsPlayer = true, class = "elite", dead = true }
+    wait()
+    eq(count(chatTexts(), "aggro"), 0, "dead mob")
+    -- 6. out of combat in the open world: nothing (run in dungeons/raids, and no combat)
+    reset(); S.threat = nil; S.inCombat = false
+    S.units.target = { name = "Big", hostile = true, guid = "E", targetsPlayer = true, class = "elite" }
+    wait()
+    eq(count(chatTexts(), "aggro"), 0, "not in combat")
+    S.threat, S.units, S.plates = 0, {}, {}
+end)
+
 test("not a healer: alerts held back", function()
     fresh()
     VMH.Profiles:Select("Dungeon", true)
