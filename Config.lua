@@ -395,7 +395,7 @@ function Cfg:Build_announce(page)
     }, function() return an().iconStyle end, function(v) an().iconStyle = v end), 12, 48)
     page:Place(W.EditBox(page.frame, "Extra text before every message (optional)", 200, function() return an().prefix end,
         function(v) an().prefix = v end), 12, 48)
-    page:Note("Each alert has its own icon (> on its tab): skull = aggro, star = mana, cross = health/death, diamond = crowd control, triangle = healing resumed.", 30)
+    page:Note("Each alert has its own icon (> on its tab): skull = aggro, red cross = bad (crowd control, health, death), star = mana warnings, green triangle = good.", 30)
     slider(page, 12, "Minimum time between messages", 0.5, 5, 0.5, function() return an().throttle end,
         function(v) an().throttle = v end, function(v) return v .. "s" end)
     slider(page, 12, "Drop identical messages within", 0, 30, 1, function() return an().duplicateWindow end,

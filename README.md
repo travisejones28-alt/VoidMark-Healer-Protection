@@ -111,6 +111,10 @@ Tests run against a mocked client (including secret values). They do not replace
 
 ## Changes
 
+**1.1.8** - Icon colors: skull = aggro, red cross = bad (crowd control, countdown, low/critical health, death,
+self-res), star = mana warnings, green triangle = good (healing resumed, mana recovered, back up, done drinking).
+Existing profiles move over once; icons you picked yourself are kept.
+
 **1.1.7** - Mana recovered uses the green triangle (green = back to good, same as healing resumed).
 
 **1.1.6** - Two icons on each side of group messages ({star}{star} Low mana {star}{star}). Announcements > Icon style

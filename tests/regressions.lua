@@ -273,7 +273,7 @@ test("channels: raid dedupe, self only, say outside instance skipped", function(
     Advance(0.2)
     local c = chatTexts()
     eq(#c, 1, "one message")
-    eq(c[1], "RAID:{diamond}{diamond} Healer silenced! (8s) {diamond}{diamond}")
+    eq(c[1], "RAID:{cross}{cross} Healer silenced! (8s) {cross}{cross}")
     S.chat = {}
     S.raid = false
     S.homeGroup = false
@@ -282,7 +282,7 @@ test("channels: raid dedupe, self only, say outside instance skipped", function(
     VMH.db.alerts.stun.channels = { auto = true, party = true }
     VMH.Announce:Alert("stun", { dur = "4s" })
     Advance(1.2)
-    eq(chatTexts()[1], "INSTANCE_CHAT:{diamond}{diamond} Healer stunned! (4s) {diamond}{diamond}")
+    eq(chatTexts()[1], "INSTANCE_CHAT:{cross}{cross} Healer stunned! (4s) {cross}{cross}")
     S.chat = {}
     VMH.db.alerts.fear.channels = { self = true }
     VMH.Announce:Alert("fear", {})
@@ -328,7 +328,7 @@ test("simulations stay local and are not recorded", function()
     eq(#S.chat, 0, "no group chat from simulations")
     eq(VMH.History.session.cc, 0)
     eq(VMH.History.session.blockedTime, 0)
-    assert(has(S.prints, "[SIM -> PARTY]|r {diamond}{diamond} Healer silenced! (8s) {diamond}{diamond}"), "sim silence shown")
+    assert(has(S.prints, "[SIM -> PARTY]|r {cross}{cross} Healer silenced! (8s) {cross}{cross}"), "sim silence shown")
     assert(has(S.prints, "healing resumed! (still rooted)"), "sim overlap recovery")
     noErrors()
 end)
@@ -677,7 +677,7 @@ test("run in: dungeons and raids only is the default and pauses the open world",
     -- simulations still work for setup
     SlashCmdList.VOIDMARKHEALER("test silence")
     Advance(0.5)
-    assert(has(S.prints, "[SIM -> PARTY]|r {diamond}{diamond} Healer silenced! (8s) {diamond}{diamond}"), "sim works in world")
+    assert(has(S.prints, "[SIM -> PARTY]|r {cross}{cross} Healer silenced! (8s) {cross}{cross}"), "sim works in world")
     SlashCmdList.VOIDMARKHEALER("stop")
     Advance(0.5)
     -- inside a dungeon it runs
@@ -716,10 +716,20 @@ test("icons: per alert kind, old skull prefix removed once, editable", function(
     eq(sent("aggro"), "{skull}{skull} Healer has aggro! {skull}{skull}")
     eq(sent("oom", { pct = 8 }), "{star}{star} Out of mana! (8%) {star}{star}")
     eq(sent("death"), "{cross}{cross} Healer is dead! {cross}{cross}")
-    eq(sent("silence", { dur = "8s" }), "{diamond}{diamond} Healer silenced! (8s) {diamond}{diamond}")
+    eq(sent("silence", { dur = "8s" }), "{cross}{cross} Healer silenced! (8s) {cross}{cross}")
     eq(sent("recovered"), "{triangle}{triangle} Healer free - healing resumed! {triangle}{triangle}")
     VMH.db.alerts.manaRecovered.channels = { auto = true }
     eq(sent("manaRecovered", { pct = 65 }), "{triangle}{triangle} Mana recovered (65%) {triangle}{triangle}")
+    eq(sent("revived"), "{triangle}{triangle} Healer is back up! {triangle}{triangle}")
+    -- old profile: diamond CC / cross revive move to the new scheme, a hand-picked icon stays
+    VoidMarkHealerDB.colorSchemeSet = nil
+    VoidMarkHealerDB.profiles.Raid.alerts.stun.icon = "{diamond}"
+    VoidMarkHealerDB.profiles.Raid.alerts.revived.icon = "{cross}"
+    VoidMarkHealerDB.profiles.Raid.alerts.fear.icon = "{moon}"
+    VMH.Profiles:Load()
+    eq(VoidMarkHealerDB.profiles.Raid.alerts.stun.icon, "{cross}")
+    eq(VoidMarkHealerDB.profiles.Raid.alerts.revived.icon, "{triangle}")
+    eq(VoidMarkHealerDB.profiles.Raid.alerts.fear.icon, "{moon}", "your own pick kept")
     VoidMarkHealerDB.manaGreenSet = nil
     VoidMarkHealerDB.profiles.Raid.alerts.manaRecovered.icon = "{star}"
     VoidMarkHealerDB.profiles.Raid.alerts.drinking.icon = "{star}"

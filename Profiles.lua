@@ -87,6 +87,23 @@ function P:Load()
         for _, l in ipairs(VMH.debugLog or {}) do db.log[#db.log + 1] = l end
         VMH.debugLog = db.log
     end
+    -- 1.1.8: red = bad, green = good (once; icons you picked yourself are kept)
+    if not db.colorSchemeSet then
+        db.colorSchemeSet = true
+        local OLD = { manaRecovered = "{star}", drinkDone = "{star}", revived = "{cross}" }
+        for _, prof in pairs(db.profiles) do
+            if type(prof) == "table" and type(prof.alerts) == "table" then
+                for key, a in pairs(prof.alerts) do
+                    local def = VMH.ALERT_BY_KEY[key]
+                    if type(a) == "table" and def then
+                        local was = a.icon
+                        local old = OLD[key] or (def.tab == "cc" and "{diamond}") or nil
+                        if was == nil or (old and was == old) then a.icon = VMH.DefaultIcon(key) end
+                    end
+                end
+            end
+        end
+    end
     -- 1.1.7: mana recovered uses the green triangle (once, only if still the old star)
     if not db.manaGreenSet then
         db.manaGreenSet = true

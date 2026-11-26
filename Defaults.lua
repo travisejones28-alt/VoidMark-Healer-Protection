@@ -64,17 +64,17 @@ VMH.ICONS = {
     { value = "{square}", label = "Square" }, { value = "{moon}", label = "Moon" }, { value = "{triangle}", label = "Triangle" },
     { value = "{diamond}", label = "Diamond" }, { value = "{circle}", label = "Circle" }, { value = "{star}", label = "Star" },
 }
+-- Colors: skull = aggro, red cross = bad, star = mana warnings, green triangle = good.
 local ICON_FOR = {
     aggro = "{skull}", threat = "{skull}", multiEnemy = "{skull}", los = "{skull}",
-    lowMana = "{star}", oom = "{star}", drinking = "{star}", drinkDone = "{star}",
-    manaRecovered = "{triangle}",   -- green = back to good
-    lowHealth = "{cross}", criticalHealth = "{cross}", death = "{cross}", selfRes = "{cross}", revived = "{cross}",
-    recovered = "{triangle}",
+    lowMana = "{star}", oom = "{star}", drinking = "{star}",
+    lowHealth = "{cross}", criticalHealth = "{cross}", death = "{cross}", selfRes = "{cross}",
+    manaRecovered = "{triangle}", drinkDone = "{triangle}", revived = "{triangle}", recovered = "{triangle}",
 }
 VMH.DefaultIcon = function(key)
     if ICON_FOR[key] then return ICON_FOR[key] end
     local a = VMH.ALERT_BY_KEY[key]
-    return (a and a.tab == "cc") and "{diamond}" or ""
+    return (a and a.tab == "cc") and "{cross}" or ""
 end
 
 VMH.SOUNDS = {
