@@ -170,6 +170,8 @@ end
 function Cmd:Init()
     _G.SLASH_VOIDMARKHEALER1 = "/vmh"
     _G.SLASH_VOIDMARKHEALER2 = "/voidmarkhealer"
-    _G.SlashCmdList = _G.SlashCmdList or {}
-    _G.SlashCmdList.VOIDMARKHEALER = function(msg) Cmd:Handle(msg) end
+    -- 1.1.4: never assign the global SlashCmdList itself (even to the same table).
+    -- That write taints it, and every slash command typed afterwards (/ginvite,
+    -- /cast macros) runs as VoidMark Healer and gets blocked.
+    SlashCmdList.VOIDMARKHEALER = function(msg) Cmd:Handle(msg) end
 end

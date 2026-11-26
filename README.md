@@ -111,6 +111,10 @@ Tests run against a mocked client (including secret values). They do not replace
 
 ## Changes
 
+**1.1.4** - No more "VoidMarkHealer has been blocked from an action only available to the Blizzard UI"
+after typing a slash command such as `/ginvite`. The addon re-assigned the game's slash-command list
+when it loaded, which made every slash command typed afterwards count as the addon's.
+
 **1.1.3** - Quieter and smarter:
 - Knows your active talent spec: mostly Shadow points = not healing, so no alerts as Shadow even out of Shadowform
   (Disc/Holy specs alert as before; if talents can't be read, nothing is blocked).

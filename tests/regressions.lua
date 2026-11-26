@@ -1118,6 +1118,22 @@ test("status, debug and reset commands", function()
     noErrors()
 end)
 
+test("1.1.4 slash setup never reassigns the global SlashCmdList (taint)", function()
+    local real = SlashCmdList
+    local wrote = false
+    rawset(_G, "SlashCmdList", nil)
+    local mt = getmetatable(_G)
+    setmetatable(_G, {
+        __index = function(t, k) if k == "SlashCmdList" then return real end end,
+        __newindex = function(t, k, v) if k == "SlashCmdList" then wrote = true end rawset(t, k, v) end,
+    })
+    real.VOIDMARKHEALER = nil
+    VMH.Commands:Init()
+    setmetatable(_G, mt)
+    if rawget(_G, "SlashCmdList") == nil then rawset(_G, "SlashCmdList", real) end
+    assert(not wrote, "Init assigned the global SlashCmdList (taints /ginvite and other slash commands)")
+    assert(real.VOIDMARKHEALER, "slash handler missing")
+end)
 print("PASSED " .. passed)
 if #failed > 0 then
     for _, f in ipairs(failed) do print("FAIL " .. f) end
