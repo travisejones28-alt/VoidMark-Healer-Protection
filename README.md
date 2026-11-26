@@ -111,6 +111,9 @@ Tests run against a mocked client (including secret values). They do not replace
 
 ## Changes
 
+**1.1.6** - Two icons on each side of group messages ({star}{star} Low mana {star}{star}). Announcements > Icon style
+switches back to one icon before the text.
+
 **1.1.5** - Each kind of alert gets its own raid icon in group chat: skull = aggro / enemies / line of sight,
 star = mana and drinking, cross = health and death, diamond = crowd control and countdown, triangle = healing resumed.
 Change any alert's icon with the Icon dropdown on its settings (> on its tab). The old all-skull prefix is removed once.

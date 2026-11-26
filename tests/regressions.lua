@@ -273,7 +273,7 @@ test("channels: raid dedupe, self only, say outside instance skipped", function(
     Advance(0.2)
     local c = chatTexts()
     eq(#c, 1, "one message")
-    eq(c[1], "RAID:{diamond} Healer silenced! (8s)")
+    eq(c[1], "RAID:{diamond}{diamond} Healer silenced! (8s) {diamond}{diamond}")
     S.chat = {}
     S.raid = false
     S.homeGroup = false
@@ -282,7 +282,7 @@ test("channels: raid dedupe, self only, say outside instance skipped", function(
     VMH.db.alerts.stun.channels = { auto = true, party = true }
     VMH.Announce:Alert("stun", { dur = "4s" })
     Advance(1.2)
-    eq(chatTexts()[1], "INSTANCE_CHAT:{diamond} Healer stunned! (4s)")
+    eq(chatTexts()[1], "INSTANCE_CHAT:{diamond}{diamond} Healer stunned! (4s) {diamond}{diamond}")
     S.chat = {}
     VMH.db.alerts.fear.channels = { self = true }
     VMH.Announce:Alert("fear", {})
@@ -328,7 +328,7 @@ test("simulations stay local and are not recorded", function()
     eq(#S.chat, 0, "no group chat from simulations")
     eq(VMH.History.session.cc, 0)
     eq(VMH.History.session.blockedTime, 0)
-    assert(has(S.prints, "[SIM -> PARTY]|r {diamond} Healer silenced! (8s)"), "sim silence shown")
+    assert(has(S.prints, "[SIM -> PARTY]|r {diamond}{diamond} Healer silenced! (8s) {diamond}{diamond}"), "sim silence shown")
     assert(has(S.prints, "healing resumed! (still rooted)"), "sim overlap recovery")
     noErrors()
 end)
@@ -677,7 +677,7 @@ test("run in: dungeons and raids only is the default and pauses the open world",
     -- simulations still work for setup
     SlashCmdList.VOIDMARKHEALER("test silence")
     Advance(0.5)
-    assert(has(S.prints, "[SIM -> PARTY]|r {diamond} Healer silenced! (8s)"), "sim works in world")
+    assert(has(S.prints, "[SIM -> PARTY]|r {diamond}{diamond} Healer silenced! (8s) {diamond}{diamond}"), "sim works in world")
     SlashCmdList.VOIDMARKHEALER("stop")
     Advance(0.5)
     -- inside a dungeon it runs
@@ -713,14 +713,17 @@ test("icons: per alert kind, old skull prefix removed once, editable", function(
         A:Alert(key, vars or {}); Advance(1.2)
         return S.chat[1] and S.chat[1].msg
     end
-    eq(sent("aggro"), "{skull} Healer has aggro!")
+    eq(sent("aggro"), "{skull}{skull} Healer has aggro! {skull}{skull}")
+    eq(sent("oom", { pct = 8 }), "{star}{star} Out of mana! (8%) {star}{star}")
+    eq(sent("death"), "{cross}{cross} Healer is dead! {cross}{cross}")
+    eq(sent("silence", { dur = "8s" }), "{diamond}{diamond} Healer silenced! (8s) {diamond}{diamond}")
+    eq(sent("recovered"), "{triangle}{triangle} Healer free - healing resumed! {triangle}{triangle}")
+    VMH.db.announce.iconStyle = "single"
     eq(sent("oom", { pct = 8 }), "{star} Out of mana! (8%)")
-    eq(sent("death"), "{cross} Healer is dead!")
-    eq(sent("silence", { dur = "8s" }), "{diamond} Healer silenced! (8s)")
-    eq(sent("recovered"), "{triangle} Healer free - healing resumed!")
     VMH.db.alerts.oom.icon = "{square}"
     eq(sent("oom", { pct = 8 }), "{square} Out of mana! (8%)")
     VMH.db.alerts.oom.icon = ""
+    VMH.db.announce.iconStyle = "double"
     eq(sent("oom", { pct = 8 }), "Out of mana! (8%)")
     assert(not has(S.prints, "{"), "local prints stay clean")
     -- an old profile with the all-skull prefix gets per-alert icons, no double icon
@@ -730,13 +733,13 @@ test("icons: per alert kind, old skull prefix removed once, editable", function(
     VMH.Profiles:Load()
     VMH.Profiles:Select("Dungeon", true)
     eq(VMH.db.announce.prefix, "")
-    eq(sent("oom", { pct = 8 }), "{star} Out of mana! (8%)")
+    eq(sent("oom", { pct = 8 }), "{star}{star} Out of mana! (8%) {star}{star}")
     -- a prefix you set yourself later is kept
     VoidMarkHealerDB.profiles.Dungeon.announce.prefix = "[Heals]"
     VMH.Profiles:Load()
     eq(VoidMarkHealerDB.profiles.Dungeon.announce.prefix, "[Heals]")
     VMH.Profiles:Select("Dungeon", true)
-    eq(sent("oom", { pct = 8 }), "{star} [Heals] Out of mana! (8%)")
+    eq(sent("oom", { pct = 8 }), "{star}{star} [Heals] Out of mana! (8%) {star}{star}")
 end)
 
 test("debug trail explains a missed alert and survives reload", function()

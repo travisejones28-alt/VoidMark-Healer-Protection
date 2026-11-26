@@ -383,8 +383,13 @@ function A:AlertInner(key, vars, opts)
     local outgoing = db.announce.outgoing
     local prefix = db.announce.prefix or ""
     local icon = cfg.icon or ""
+    local tail = ""
+    if icon ~= "" and db.announce.iconStyle ~= "single" then
+        icon = icon .. icon
+        tail = " " .. icon
+    end
     local lead = icon .. ((icon ~= "" and prefix ~= "") and " " or "") .. prefix
-    local msg = sanitize((lead ~= "" and (lead .. " ") or "") .. text)
+    local msg = sanitize((lead ~= "" and (lead .. " ") or "") .. text .. tail)
 
     local localOnly = opts.sim or (opts.test and not db.general.testsSendChat)
     -- Whisper the player concerned (line of sight), without the group prefix.

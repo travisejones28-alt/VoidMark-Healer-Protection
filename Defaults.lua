@@ -123,6 +123,7 @@ function VMH.BaseProfile()
         announce = {
             outgoing = true,           -- false = nothing leaves this client
             prefix = "",               -- optional extra text after each alert's icon
+            iconStyle = "double",      -- double = two icons each side, single = one before
             throttle = 1.0,            -- seconds between outgoing messages
             duplicateWindow = 6,       -- identical text within this window is dropped
             hysteresis = 10,           -- percentage points before mana/health re-arm

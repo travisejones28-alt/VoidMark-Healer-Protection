@@ -2,7 +2,7 @@
 ## Title: |cff9d5cffVoidMark|r Healer
 ## Notes: Healer protection and group communication: crowd control, interrupts, mana, health and aggro alerts with smart countdowns.
 ## Author: Taliaa
-## Version: 1.1.5
+## Version: 1.1.6
 ## Category: Combat
 ## IconTexture: Interface\Icons\Spell_Holy_PowerWordShield
 ## SavedVariables: VoidMarkHealerDB

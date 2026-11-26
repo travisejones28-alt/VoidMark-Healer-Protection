@@ -390,6 +390,9 @@ function Cfg:Build_announce(page)
         "Off: nothing leaves your client. Self-only and on-screen alerts still work.")
     check(page, 12, "Test buttons send real chat", function() return db().general.testsSendChat end,
         function(v) db().general.testsSendChat = v end)
+    page:Place(W.Dropdown(page.frame, "Icon style", 200, {
+        { value = "double", label = "Two on each side" }, { value = "single", label = "One before the text" },
+    }, function() return an().iconStyle end, function(v) an().iconStyle = v end), 12, 48)
     page:Place(W.EditBox(page.frame, "Extra text before every message (optional)", 200, function() return an().prefix end,
         function(v) an().prefix = v end), 12, 48)
     page:Note("Each alert has its own icon (> on its tab): skull = aggro, star = mana, cross = health/death, diamond = crowd control, triangle = healing resumed.", 30)
