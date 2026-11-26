@@ -111,6 +111,8 @@ Tests run against a mocked client (including secret values). They do not replace
 
 ## Changes
 
+**1.1.7** - Mana recovered uses the green triangle (green = back to good, same as healing resumed).
+
 **1.1.6** - Two icons on each side of group messages ({star}{star} Low mana {star}{star}). Announcements > Icon style
 switches back to one icon before the text.
 

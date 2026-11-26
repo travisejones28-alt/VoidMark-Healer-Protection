@@ -87,6 +87,14 @@ function P:Load()
         for _, l in ipairs(VMH.debugLog or {}) do db.log[#db.log + 1] = l end
         VMH.debugLog = db.log
     end
+    -- 1.1.7: mana recovered uses the green triangle (once, only if still the old star)
+    if not db.manaGreenSet then
+        db.manaGreenSet = true
+        for _, prof in pairs(db.profiles) do
+            local a = type(prof) == "table" and type(prof.alerts) == "table" and prof.alerts.manaRecovered
+            if type(a) == "table" and (a.icon == nil or a.icon == "{star}") then a.icon = "{triangle}" end
+        end
+    end
     -- 1.1.5: icons are per alert; the old all-skull prefix is removed (once)
     if not db.iconsSet then
         db.iconsSet = true

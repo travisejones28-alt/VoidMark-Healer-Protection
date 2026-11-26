@@ -66,7 +66,8 @@ VMH.ICONS = {
 }
 local ICON_FOR = {
     aggro = "{skull}", threat = "{skull}", multiEnemy = "{skull}", los = "{skull}",
-    lowMana = "{star}", oom = "{star}", manaRecovered = "{star}", drinking = "{star}", drinkDone = "{star}",
+    lowMana = "{star}", oom = "{star}", drinking = "{star}", drinkDone = "{star}",
+    manaRecovered = "{triangle}",   -- green = back to good
     lowHealth = "{cross}", criticalHealth = "{cross}", death = "{cross}", selfRes = "{cross}", revived = "{cross}",
     recovered = "{triangle}",
 }

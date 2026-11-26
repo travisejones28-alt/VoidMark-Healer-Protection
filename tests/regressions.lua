@@ -718,6 +718,15 @@ test("icons: per alert kind, old skull prefix removed once, editable", function(
     eq(sent("death"), "{cross}{cross} Healer is dead! {cross}{cross}")
     eq(sent("silence", { dur = "8s" }), "{diamond}{diamond} Healer silenced! (8s) {diamond}{diamond}")
     eq(sent("recovered"), "{triangle}{triangle} Healer free - healing resumed! {triangle}{triangle}")
+    VMH.db.alerts.manaRecovered.channels = { auto = true }
+    eq(sent("manaRecovered", { pct = 65 }), "{triangle}{triangle} Mana recovered (65%) {triangle}{triangle}")
+    VoidMarkHealerDB.manaGreenSet = nil
+    VoidMarkHealerDB.profiles.Raid.alerts.manaRecovered.icon = "{star}"
+    VoidMarkHealerDB.profiles.Raid.alerts.drinking.icon = "{star}"
+    VMH.Profiles:Load()
+    VMH.Profiles:Select("Dungeon", true)
+    eq(VoidMarkHealerDB.profiles.Raid.alerts.manaRecovered.icon, "{triangle}", "old profile updated")
+    eq(VoidMarkHealerDB.profiles.Raid.alerts.drinking.icon, "{star}", "other mana alerts keep the star")
     VMH.db.announce.iconStyle = "single"
     eq(sent("oom", { pct = 8 }), "{star} Out of mana! (8%)")
     VMH.db.alerts.oom.icon = "{square}"
