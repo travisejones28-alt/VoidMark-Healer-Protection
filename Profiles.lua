@@ -87,6 +87,11 @@ function P:Load()
         for _, l in ipairs(VMH.debugLog or {}) do db.log[#db.log + 1] = l end
         VMH.debugLog = db.log
     end
+    -- 1.2.1: elite-only aggro was reverted; drop its saved setting
+    for _, prof in pairs(db.profiles) do
+        local a = type(prof) == "table" and type(prof.alerts) == "table" and prof.alerts.aggro
+        if type(a) == "table" then a.eliteOnly = nil end
+    end
     -- 1.1.8: red = bad, green = good (once; icons you picked yourself are kept)
     if not db.colorSchemeSet then
         db.colorSchemeSet = true

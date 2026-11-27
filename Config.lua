@@ -345,8 +345,6 @@ end
 
 function Cfg:Build_aggro(page)
     self:AlertSection(page, "aggro")
-    check(page, 12, "Aggro: elite mobs only (ignore normal mobs)", function() return db().alerts.aggro.eliteOnly ~= false end,
-        function(v) db().alerts.aggro.eliteOnly = v end, "Only announce aggro when an elite, rare elite or boss is on you.")
     page:Note("Enemy counts use visible enemies: turn enemy nameplates on to see more than your target and focus. Line-of-sight names use your mouseover or friendly target.", 44)
 end
 

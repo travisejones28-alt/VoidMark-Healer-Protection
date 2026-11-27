@@ -111,6 +111,9 @@ Tests run against a mocked client (including secret values). They do not replace
 
 ## Changes
 
+**1.2.1** - Reverted elite-only aggro (1.1.9): it missed real aggro when the mob on you had no visible nameplate.
+Aggro alerts work as before (still need 2 seconds of aggro).
+
 **1.2.0** - No more double message on a silence: "Healer can't cast heals!" waits 0.8s and is dropped if the real
 effect ("Healer silenced! (5s)") shows up in that time. It still posts when the game never reveals the details.
 

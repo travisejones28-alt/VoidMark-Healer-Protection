@@ -1073,7 +1073,6 @@ test("aggro must last 2 seconds", function()
     fresh()
     VMH.Profiles:Select("Dungeon", true)
     S.inCombat = true
-    S.units.target = { name = "Scarlet", surname = "Guard", hostile = true, guid = "G", targetsPlayer = true, class = "elite" }
     S.threat = 3
     Emit("UNIT_THREAT_SITUATION_UPDATE", "player")
     Advance(1)
@@ -1086,78 +1085,6 @@ test("aggro must last 2 seconds", function()
     Advance(3)
     eq(count(chatTexts(), "Healer has aggro!"), 1, "held aggro: announced")
     S.threat, S.inCombat = 0, false
-end)
-
-test("aggro: elite mobs only (normal mobs ignored, hidden class counts, can be turned off)", function()
-    fresh()
-    VMH.Profiles:Select("Dungeon", true)
-    S.inCombat = true
-    S.threat = 3
-    local function pull(class, secret)
-        S.chat = {}; VMH.Announce.last, VMH.Announce.recent = {}, {}
-        VMH.Threat.aggro, VMH.Threat.aggroSince = false, nil
-        S.units.target = { name = "Mob", hostile = true, guid = "M", targetsPlayer = true, class = class, classSecret = secret }
-        Emit("UNIT_THREAT_SITUATION_UPDATE", "player"); Advance(3)
-        return count(chatTexts(), "Healer has aggro!") == 1
-    end
-    assert(not pull("normal"), "normal mob: quiet")
-    assert(not pull("trivial"), "trivial mob: quiet")
-    assert(pull("elite"), "elite: announced")
-    assert(pull("rareelite"), "rare elite: announced")
-    assert(pull("worldboss"), "boss: announced")
-    assert(pull(nil, true), "hidden classification: announced (never miss an elite)")
-    VMH.db.alerts.aggro.eliteOnly = false
-    assert(pull("normal"), "setting off: normal mobs too")
-    S.threat, S.inCombat = 0, false
-end)
-
-test("aggro elite check: mixed pulls, hidden threat data, brief targeting", function()
-    fresh()
-    VMH.Profiles:Select("Dungeon", true)
-    S.inCombat = true
-    local function reset()
-        S.chat = {}; VMH.Announce.last, VMH.Announce.recent = {}, {}
-        VMH.Threat.aggro, VMH.Threat.aggroSince, VMH.Threat.calmSince = false, nil, nil
-        S.units, S.plates = {}, {}
-    end
-    local function wait(sec) Emit("UNIT_THREAT_SITUATION_UPDATE", "player"); Advance(sec or 3) end
-    -- 1. normal mob on you, elite on the tank: quiet
-    reset(); S.threat = 3
-    S.plates = { "nameplate1", "nameplate2" }
-    S.units.nameplate1 = { name = "Rat", hostile = true, guid = "R", targetsPlayer = true, class = "normal" }
-    S.units.nameplate2 = { name = "Big", surname = "Elite", hostile = true, guid = "E", targetsPlayer = false, class = "elite" }
-    wait()
-    eq(count(chatTexts(), "aggro"), 0, "normal on me, elite on tank")
-    -- 2. normal and elite both on you: announced with the elite's name
-    reset(); S.threat = 3
-    S.plates = { "nameplate1", "nameplate2" }
-    S.units.nameplate1 = { name = "Rat", hostile = true, guid = "R", targetsPlayer = true, class = "normal" }
-    S.units.nameplate2 = { name = "Big", surname = "Elite", hostile = true, guid = "E", targetsPlayer = true, class = "elite" }
-    wait()
-    eq(count(chatTexts(), "Healer has aggro! (Big Elite)"), 1, table.concat(chatTexts(), " | "))
-    -- 3. threat data hidden by the game: falls back to who is targeting you
-    reset(); S.threat = nil
-    S.units.target = { name = "Big", surname = "Elite", hostile = true, guid = "E", targetsPlayer = true, class = "elite" }
-    wait()
-    eq(count(chatTexts(), "Healer has aggro! (Big Elite)"), 1, "hidden threat, elite targeting me")
-    -- 4. elite only glances at you for 1 second: quiet
-    reset(); S.threat = 3
-    S.units.target = { name = "Big", surname = "Elite", hostile = true, guid = "E", targetsPlayer = true, class = "elite" }
-    wait(1)
-    S.units.target.targetsPlayer = false; S.threat = 0
-    wait(3)
-    eq(count(chatTexts(), "aggro"), 0, "1s glance")
-    -- 5. dead elite still "targeting" you: ignored
-    reset(); S.threat = 3
-    S.units.target = { name = "Corpse", hostile = true, guid = "D", targetsPlayer = true, class = "elite", dead = true }
-    wait()
-    eq(count(chatTexts(), "aggro"), 0, "dead mob")
-    -- 6. out of combat in the open world: nothing (run in dungeons/raids, and no combat)
-    reset(); S.threat = nil; S.inCombat = false
-    S.units.target = { name = "Big", hostile = true, guid = "E", targetsPlayer = true, class = "elite" }
-    wait()
-    eq(count(chatTexts(), "aggro"), 0, "not in combat")
-    S.threat, S.units, S.plates = 0, {}, {}
 end)
 
 test("can't-cast backup waits for the real effect (no double message)", function()
@@ -1186,6 +1113,17 @@ test("can't-cast backup waits for the real effect (no double message)", function
     Emit("SPELL_UPDATE_USABLE"); Advance(1.5)
     eq(count(chatTexts(), "Healer can't cast heals!"), 1, "backup when hidden")
     S.inCombat = false
+end)
+
+test("aggro: any mob, as before 1.1.9 (no elite filter)", function()
+    fresh()
+    VMH.Profiles:Select("Dungeon", true)
+    S.inCombat = true
+    S.threat = 3
+    Emit("UNIT_THREAT_SITUATION_UPDATE", "player"); Advance(3)
+    eq(count(chatTexts(), "Healer has aggro!"), 1, "threat says aggro, no visible mob needed")
+    eq(VMH.db.alerts.aggro.eliteOnly, nil, "old setting removed")
+    S.threat, S.inCombat = 0, false
 end)
 
 test("not a healer: alerts held back", function()
