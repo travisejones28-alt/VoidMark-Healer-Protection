@@ -111,6 +111,9 @@ Tests run against a mocked client (including secret values). They do not replace
 
 ## Changes
 
+**1.2.0** - No more double message on a silence: "Healer can't cast heals!" waits 0.8s and is dropped if the real
+effect ("Healer silenced! (5s)") shows up in that time. It still posts when the game never reveals the details.
+
 **1.1.9** - Aggro is only announced when an elite, rare elite or boss is on you; normal and trivial mobs are ignored.
 If the game hides a mob's classification it counts as elite. Turn off under Aggro & Threat > "Aggro: elite mobs only".
 

@@ -901,7 +901,7 @@ test("everything hidden: greyed-out heal announces 'can't cast' and recovery", f
     eq(VMH.CrowdControl.healSpell, 2050, "cheapest real heal")
     S.loc = { { locType = SECRET, spellID = SECRET, startTime = NOW, duration = 6 } }
     S.usable[2050] = { usable = false, noMana = false }
-    Emit("LOSS_OF_CONTROL_ADDED"); Emit("SPELL_UPDATE_USABLE"); Advance(0.5)
+    Emit("LOSS_OF_CONTROL_ADDED"); Emit("SPELL_UPDATE_USABLE"); Advance(1.2)
     eq(count(chatTexts(), "Healer can't cast heals!"), 1, table.concat(chatTexts(), " | "))
     assert(table.concat(VMH.debugLog, "\n"):find("probe LOSS_OF_CONTROL_ADDED: LoC count HIDDEN", 1, true), "snapshot logged")
     Advance(4)
@@ -1158,6 +1158,34 @@ test("aggro elite check: mixed pulls, hidden threat data, brief targeting", func
     wait()
     eq(count(chatTexts(), "aggro"), 0, "not in combat")
     S.threat, S.units, S.plates = 0, {}, {}
+end)
+
+test("can't-cast backup waits for the real effect (no double message)", function()
+    fresh()
+    VMH.Profiles:Select("Dungeon", true)
+    S.spellbook = { 2050 }; S.costs = { [2050] = 75 }
+    Emit("SPELLS_CHANGED"); Advance(1.5)
+    VMH.CrowdControl.healDirty = true
+    S.inCombat = true
+    -- heal greys out first; the silence details arrive 0.3s later
+    S.usable = { [2050] = { usable = false, noMana = false } }
+    Emit("SPELL_UPDATE_USABLE"); Advance(0.3)
+    addLoC("SILENCE", 15487, 5)
+    Advance(1.5)
+    local c = chatTexts()
+    eq(count(c, "can't cast"), 0, table.concat(c, " | "))
+    eq(count(c, "Healer silenced!"), 1)
+    eq(VMH.History.session.cc, 1, "counted once")
+    -- details never arrive: the backup still speaks up
+    S.loc = {}; S.usable = {}
+    Emit("SPELL_UPDATE_USABLE"); Advance(2)
+    S.chat = {}
+    Advance(7)
+    S.locSecret, S.aurasHidden = true, true
+    S.usable = { [2050] = { usable = false, noMana = false } }
+    Emit("SPELL_UPDATE_USABLE"); Advance(1.5)
+    eq(count(chatTexts(), "Healer can't cast heals!"), 1, "backup when hidden")
+    S.inCombat = false
 end)
 
 test("not a healer: alerts held back", function()

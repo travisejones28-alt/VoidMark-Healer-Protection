@@ -268,6 +268,7 @@ function CC:Scan()
             added[#added + 1] = e
         else
             e.addedAt = prev.addedAt
+            e.confirmed = prev.confirmed
             e.pruneAsked = (prev.expires == e.expires) and prev.pruneAsked or nil
             -- Same spell landing again (re-applied, not just a refresh tick)
             if e.expires and prev.expires and e.expires > prev.expires + 1.0 and prev.expires - t < 1.5 then
@@ -315,7 +316,23 @@ function CC:AlreadySeen(e)
     return false
 end
 
+-- The greyed-out-heal check often notices a silence a split second before the
+-- game reveals the real effect. Wait briefly; announce only if nothing better came.
+CC.NOCAST_WAIT = 0.8
 function CC:OnAdded(e)
+    if e.type == "NOCAST" and not e.confirmed then
+        local since = e.addedAt
+        VMH.After(self.NOCAST_WAIT, function()
+            local cur = CC.active.nocast
+            if cur and cur.addedAt == since then
+                cur.confirmed = true
+                CC:OnAdded(cur)
+            else
+                VMH:Debug("can't-cast check replaced by the real effect")
+            end
+        end)
+        return
+    end
     if self:AlreadySeen(e) then
         VMH:Debug("same effect seen again, not re-announced: " .. e.type)
         return
