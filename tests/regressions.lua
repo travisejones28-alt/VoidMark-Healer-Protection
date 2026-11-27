@@ -1069,24 +1069,26 @@ test("dungeon: 3+ enemies, countdown only from 8s, old Dungeon profile updated o
     eq(VoidMarkHealerDB.profiles.Dungeon.countdown.minDuration, 5, "your later choice sticks")
 end)
 
-test("aggro must last 2 seconds", function()
+test("aggro must last 1 second, then posts right away", function()
     fresh()
     VMH.Profiles:Select("Dungeon", true)
     S.inCombat = true
     S.threat = 3
     Emit("UNIT_THREAT_SITUATION_UPDATE", "player")
-    Advance(1)
+    Advance(0.6)
     S.threat = 0
     Emit("UNIT_THREAT_SITUATION_UPDATE", "player")
     Advance(3)
-    eq(count(chatTexts(), "aggro"), 0, "brief aggro: quiet")
+    eq(count(chatTexts(), "aggro"), 0, "half-second glance: quiet")
+    S.chat = {}
     S.threat = 3
+    local t0 = NOW
     Emit("UNIT_THREAT_SITUATION_UPDATE", "player")
-    Advance(3)
-    eq(count(chatTexts(), "Healer has aggro!"), 1, "held aggro: announced")
+    Advance(1.5)
+    eq(count(chatTexts(), "Healer has aggro!"), 1, "held 1s: announced")
+    assert(S.chat[1].t - t0 <= 1.2, "posted about 1s after aggro, took " .. (S.chat[1].t - t0))
     S.threat, S.inCombat = 0, false
 end)
-
 test("can't-cast backup waits for the real effect (no double message)", function()
     fresh()
     VMH.Profiles:Select("Dungeon", true)

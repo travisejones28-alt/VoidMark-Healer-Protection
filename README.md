@@ -111,6 +111,9 @@ Tests run against a mocked client (including secret values). They do not replace
 
 ## Changes
 
+**1.2.2** - Aggro posts after 1 second of aggro instead of 2, and threat changes are checked right away
+(about 1.1s from getting hit to the message).
+
 **1.2.1** - Reverted elite-only aggro (1.1.9): it missed real aggro when the mob on you had no visible nameplate.
 Aggro alerts work as before (still need 2 seconds of aggro).
 

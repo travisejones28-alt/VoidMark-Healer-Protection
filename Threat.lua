@@ -13,6 +13,7 @@ T.threatHigh = false
 T.multi = false
 T.pending = false
 T.calmSince = nil
+T.AGGRO_HOLD = 1   -- seconds of aggro before it is announced
 
 local EXTRA_UNITS = { "target", "focus", "arena1", "arena2", "arena3", "arena4", "arena5", "boss1", "boss2", "boss3", "boss4", "boss5" }
 
@@ -87,14 +88,14 @@ function T:Evaluate()
     if hasAggro then
         self.calmSince = nil
         if not self.aggro then
-            -- must last 2 seconds: a mob briefly turning to you isn't aggro
+            -- must last 1 second: a mob briefly turning to you isn't aggro
             self.aggroSince = self.aggroSince or now
-            if now - self.aggroSince >= 2 then
+            if now - self.aggroSince >= T.AGGRO_HOLD then
                 self.aggro = true
                 self.aggroSince = nil
                 VMH.Announce:Alert("aggro", { name = npcName })
             else
-                self:Queue(2.05 - (now - self.aggroSince))
+                self:Queue(T.AGGRO_HOLD + 0.05 - (now - self.aggroSince))
             end
         end
     elseif self.aggro then
@@ -152,7 +153,7 @@ function T:Init()
     VMH:On("PLAYER_REGEN_DISABLED", function() T:Queue() end)
     VMH:On("PLAYER_REGEN_ENABLED", function() T:Queue() end)
     VMH:On("UNIT_TARGET", function(_, unit) if watchedUnit(unit) then T:Queue() end end)
-    VMH:On("UNIT_THREAT_SITUATION_UPDATE", function() T:Queue() end)
+    VMH:On("UNIT_THREAT_SITUATION_UPDATE", function() T:Queue(0.05) end)
     VMH:On("UNIT_THREAT_LIST_UPDATE", function() T:Queue() end)
 end
 
